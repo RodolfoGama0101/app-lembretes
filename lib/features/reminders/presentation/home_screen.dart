@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -20,6 +23,33 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   _HomeList _selectedList = _HomeList.active;
+  late final Timer _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => setState(() {}),
+    );
+  }
+
+  @override
+  void dispose() {
+    _clock.cancel();
+    super.dispose();
+  }
+
+  Future<void> _runAction(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível alterar o lembrete.')),
+      );
+    }
+  }
 
   Future<void> _openForm([Reminder? reminder]) async {
     await Navigator.of(context).push<void>(
@@ -47,6 +77,21 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 _Header(controller: widget.controller),
+                if (kIsWeb)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(
+                        bottom: BorderSide(color: AppColors.line),
+                      ),
+                    ),
+                    child: const Text(
+                      'Nesta versão Web, os lembretes ficam neste navegador. '
+                      'Notificações não são enviadas.',
+                    ),
+                  ),
                 _ListSelector(
                   selected: _selectedList,
                   activeCount: widget.controller.active.length,
@@ -61,8 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           itemCount: items.length,
                           itemBuilder: (context, index) {
                             final reminder = items[index];
-                            final showDate =
-                                index == 0 ||
+                            final showDate = index == 0 ||
                                 !_sameDay(
                                   items[index - 1].scheduledAt,
                                   reminder.scheduledAt,
@@ -74,8 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _DateDivider(date: reminder.scheduledAt),
                                 ReminderListItem(
                                   reminder: reminder,
-                                  onToggle: () => widget.controller
-                                      .toggleCompleted(reminder),
+                                  onToggle: () => _runAction(
+                                    () => widget.controller
+                                        .toggleCompleted(reminder),
+                                  ),
                                   onTap: reminder.isCompleted
                                       ? null
                                       : () => _openForm(reminder),
@@ -124,7 +170,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (confirmed == true) await widget.controller.remove(reminder);
+    if (confirmed == true) {
+      await _runAction(() => widget.controller.remove(reminder));
+    }
   }
 
   bool _sameDay(DateTime a, DateTime b) =>
@@ -138,7 +186,8 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final next = controller.nextReminder;
+    final overdue = controller.oldestOverdue;
+    final next = overdue ?? controller.nextReminder;
     final now = DateTime.now();
     final day = DateFormat('dd').format(now);
     final month = DateFormat('MMM', 'pt_BR').format(now).replaceAll('.', '');
@@ -158,28 +207,34 @@ class _Header extends StatelessWidget {
             children: [
               Text(day, style: Theme.of(context).textTheme.displayLarge),
               const SizedBox(width: 10),
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      month.toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.blue,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        letterSpacing: 1.2,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        month.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.blue,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                    ),
-                    Text(
-                      DateFormat('EEEE', 'pt_BR').format(now),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+                      Text(
+                        DateFormat('EEEE', 'pt_BR').format(now),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               const Text(
                 'FIO',
                 style: TextStyle(
@@ -200,7 +255,11 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      next == null ? 'Tudo em dia' : 'Próximo lembrete',
+                      overdue != null
+                          ? 'Lembrete atrasado'
+                          : next == null
+                              ? 'Tudo em dia'
+                              : 'Próximo lembrete',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 3),
@@ -216,7 +275,9 @@ class _Header extends StatelessWidget {
               if (next != null) ...[
                 const SizedBox(width: 16),
                 Text(
-                  DateFormat('HH:mm').format(next.scheduledAt),
+                  DateFormat(
+                    overdue == null ? 'HH:mm' : 'dd/MM HH:mm',
+                  ).format(next.scheduledAt),
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     color: AppColors.blue,
                     fontFeatures: const [FontFeature.tabularFigures()],
@@ -226,11 +287,16 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          LinearProgressIndicator(
-            value: controller.todayProgress,
-            minHeight: 3,
-            backgroundColor: AppColors.line,
-            color: AppColors.blue,
+          Semantics(
+            label: 'Progresso dos lembretes de hoje',
+            value: '${controller.completedToday} concluídos de '
+                '${controller.completedToday + controller.remainingToday}',
+            child: LinearProgressIndicator(
+              value: controller.todayProgress,
+              minHeight: 3,
+              backgroundColor: AppColors.line,
+              color: AppColors.blue,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -304,38 +370,47 @@ class _SelectorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.blue : Colors.transparent,
-              width: 3,
+    return Semantics(
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 52,
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 360 ? 12 : 20,
+          ),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? AppColors.blue : Colors.transparent,
+                width: 3,
+              ),
             ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.ink : AppColors.muted,
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? AppColors.ink : AppColors.muted,
+                  ),
+                ),
               ),
-            ),
-            Text(
-              count.toString().padLeft(2, '0'),
-              style: TextStyle(
-                color: selected ? AppColors.blue : AppColors.muted,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
+              const SizedBox(width: 6),
+              Text(
+                count.toString().padLeft(2, '0'),
+                style: TextStyle(
+                  color: selected ? AppColors.blue : AppColors.muted,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

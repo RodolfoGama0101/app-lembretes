@@ -2,22 +2,67 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
+import 'core/theme/app_theme.dart';
 import 'features/reminders/data/local_reminder_repository.dart';
 import 'features/reminders/presentation/reminder_controller.dart';
-import 'features/reminders/services/local_notification_service.dart';
+import 'features/reminders/services/local_notification_service.dart'
+    if (dart.library.js_interop) 'features/reminders/services/web_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('pt_BR');
+  try {
+    await initializeDateFormatting('pt_BR');
 
-  final notificationService = LocalNotificationService();
-  await notificationService.initialize();
+    final notificationService = LocalNotificationService();
+    await notificationService.initialize();
 
-  final controller = ReminderController(
-    repository: LocalReminderRepository(),
-    notificationService: notificationService,
-  );
-  await controller.load();
+    final controller = ReminderController(
+      repository: LocalReminderRepository(),
+      notificationService: notificationService,
+    );
+    await controller.load();
 
-  runApp(FioApp(controller: controller));
+    runApp(FioApp(controller: controller));
+  } catch (error) {
+    debugPrint('Falha ao iniciar o Fio: $error');
+    runApp(const _StartupErrorApp());
+  }
+}
+
+class _StartupErrorApp extends StatelessWidget {
+  const _StartupErrorApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Fio',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Fio')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 40),
+                const SizedBox(height: 16),
+                const Text(
+                  'Não foi possível iniciar o Fio. Verifique as configurações '
+                  'do aparelho e tente novamente.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () async => main(),
+                  child: const Text('Tentar novamente'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

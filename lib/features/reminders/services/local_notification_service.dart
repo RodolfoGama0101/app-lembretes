@@ -11,19 +11,18 @@ import 'notification_service.dart';
 class LocalNotificationService implements NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
-  bool _canScheduleExactAlarms = false;
 
   @override
   Future<void> initialize() async {
     tz.initializeTimeZones();
+    final localTimezone = await FlutterTimezone.getLocalTimezone();
     try {
-      final localTimezone = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(localTimezone));
-    } catch (_) {
-      tz.setLocalLocation(tz.UTC);
+    } on tz.LocationNotFoundException {
+      throw StateError('Fuso horário local desconhecido: $localTimezone');
     }
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('ic_stat_fio');
     const ios = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: ios);
     await _plugin.initialize(settings);
@@ -32,21 +31,18 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<bool> requestPermission() async {
     if (Platform.isAndroid) {
-      final android = _plugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
       final notificationsAllowed =
           await android?.requestNotificationsPermission() ?? true;
-      _canScheduleExactAlarms =
-          await android?.requestExactAlarmsPermission() ?? false;
+      if (notificationsAllowed) {
+        await android?.requestExactAlarmsPermission();
+      }
       return notificationsAllowed;
     }
     if (Platform.isIOS) {
-      final ios = _plugin
-          .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin
-          >();
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
       return await ios?.requestPermissions(
             alert: true,
             badge: true,
@@ -82,13 +78,21 @@ class LocalNotificationService implements NotificationService {
       ),
     );
 
+    final canScheduleExactAlarms = Platform.isAndroid
+        ? await _plugin
+                .resolvePlatformSpecificImplementation<
+                    AndroidFlutterLocalNotificationsPlugin>()
+                ?.canScheduleExactNotifications() ??
+            false
+        : false;
+
     await _plugin.zonedSchedule(
       reminder.notificationId,
       reminder.title,
       reminder.notes.isEmpty ? 'Está na hora.' : reminder.notes,
       tz.TZDateTime.from(reminder.scheduledAt, tz.local),
       details,
-      androidScheduleMode: _canScheduleExactAlarms
+      androidScheduleMode: canScheduleExactAlarms
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle,
       payload: reminder.id,

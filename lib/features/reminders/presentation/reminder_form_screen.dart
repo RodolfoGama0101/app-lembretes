@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -36,8 +37,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     final initialDate = DateTime.now().add(const Duration(hours: 1));
     _titleController = TextEditingController(text: reminder?.title ?? '');
     _notesController = TextEditingController(text: reminder?.notes ?? '');
-    _scheduledAt =
-        reminder?.scheduledAt ??
+    _scheduledAt = reminder?.scheduledAt ??
         DateTime(
           initialDate.year,
           initialDate.month,
@@ -94,44 +94,55 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
               const SizedBox(height: 24),
               const _FieldLabel('Quando?'),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _PickerButton(
-                      icon: Icons.calendar_today_outlined,
-                      label: DateFormat('dd/MM/yyyy').format(_scheduledAt),
-                      onPressed: _pickDate,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _PickerButton(
-                      icon: Icons.schedule,
-                      label: DateFormat('HH:mm').format(_scheduledAt),
-                      onPressed: _pickTime,
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final date = _PickerButton(
+                    icon: Icons.calendar_today_outlined,
+                    label: DateFormat('dd/MM/yyyy').format(_scheduledAt),
+                    onPressed: _pickDate,
+                  );
+                  final time = _PickerButton(
+                    icon: Icons.schedule,
+                    label: DateFormat('HH:mm').format(_scheduledAt),
+                    onPressed: _pickTime,
+                  );
+                  if (constraints.maxWidth < 360) {
+                    return Column(
+                      children: [date, const SizedBox(height: 8), time],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: date),
+                      const SizedBox(width: 8),
+                      Expanded(child: time),
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: 24),
-              const _FieldLabel('Tipo de notificação'),
-              const SizedBox(height: 8),
-              _NotificationOption(
-                title: 'Temporária',
-                description: 'Pode ser dispensada normalmente.',
-                icon: Icons.notifications_none,
-                selected: _kind == NotificationKind.temporary,
-                onTap: () => setState(() => _kind = NotificationKind.temporary),
-              ),
-              const SizedBox(height: 8),
-              _NotificationOption(
-                title: 'Fixa',
-                description: 'Permanece no painel até você concluir a tarefa.',
-                icon: Icons.push_pin_outlined,
-                selected: _kind == NotificationKind.persistent,
-                onTap: () =>
-                    setState(() => _kind = NotificationKind.persistent),
-              ),
+              if (!kIsWeb) ...[
+                const SizedBox(height: 24),
+                const _FieldLabel('Tipo de notificação'),
+                const SizedBox(height: 8),
+                _NotificationOption(
+                  title: 'Temporária',
+                  description: 'Pode ser dispensada normalmente.',
+                  icon: Icons.notifications_none,
+                  selected: _kind == NotificationKind.temporary,
+                  onTap: () =>
+                      setState(() => _kind = NotificationKind.temporary),
+                ),
+                const SizedBox(height: 8),
+                _NotificationOption(
+                  title: 'Fixa',
+                  description:
+                      'Permanece no painel até você concluir a tarefa.',
+                  icon: Icons.push_pin_outlined,
+                  selected: _kind == NotificationKind.persistent,
+                  onTap: () =>
+                      setState(() => _kind = NotificationKind.persistent),
+                ),
+              ],
               const SizedBox(height: 24),
               const _FieldLabel('Observação (opcional)'),
               const SizedBox(height: 8),
@@ -160,9 +171,8 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   Future<void> _pickDate() async {
     final value = await showDatePicker(
       context: context,
-      initialDate: _scheduledAt.isBefore(DateTime.now())
-          ? DateTime.now()
-          : _scheduledAt,
+      initialDate:
+          _scheduledAt.isBefore(DateTime.now()) ? DateTime.now() : _scheduledAt,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 3650)),
     );
@@ -205,31 +215,45 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     }
 
     setState(() => _saving = true);
-    bool permissionGranted = true;
-    if (_isEditing) {
-      await widget.controller.update(
-        widget.reminder!.copyWith(
-          title: _titleController.text.trim(),
-          notes: _notesController.text.trim(),
+    bool permissionGranted;
+    try {
+      if (_isEditing) {
+        permissionGranted = await widget.controller.update(
+          widget.reminder!.copyWith(
+            title: _titleController.text.trim(),
+            notes: _notesController.text.trim(),
+            scheduledAt: _scheduledAt,
+            kind: _kind,
+          ),
+        );
+      } else {
+        permissionGranted = await widget.controller.add(
+          title: _titleController.text,
+          notes: _notesController.text,
           scheduledAt: _scheduledAt,
           kind: _kind,
-        ),
-      );
-    } else {
-      permissionGranted = await widget.controller.add(
-        title: _titleController.text,
-        notes: _notesController.text,
-        scheduledAt: _scheduledAt,
-        kind: _kind,
-      );
-    }
-    if (!mounted) return;
-    Navigator.pop(context);
-    if (!permissionGranted) {
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          content: Text('Não foi possível salvar. Tente novamente.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    if (!permissionGranted) {
+      messenger.showSnackBar(
+        const SnackBar(
           content: Text(
-            'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
+            kIsWeb
+                ? 'Lembrete salvo neste navegador, sem notificação.'
+                : 'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
           ),
         ),
       );
@@ -271,7 +295,7 @@ class _PickerButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
-      label: Text(label),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 }
@@ -293,45 +317,49 @@ class _NotificationOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.surface : AppColors.white,
-          border: Border.all(
-            color: selected ? AppColors.blue : AppColors.line,
-            width: selected ? 2 : 1,
+    return Semantics(
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.surface : AppColors.white,
+            border: Border.all(
+              color: selected ? AppColors.blue : AppColors.line,
+              width: selected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: selected ? AppColors.blue : AppColors.muted),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontWeight: FontWeight.w700,
+          child: Row(
+            children: [
+              Icon(icon, color: selected ? AppColors.blue : AppColors.muted),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? AppColors.blue : AppColors.muted,
-            ),
-          ],
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: selected ? AppColors.blue : AppColors.muted,
+              ),
+            ],
+          ),
         ),
       ),
     );

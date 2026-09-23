@@ -1,5 +1,20 @@
 # Relatório de QA e revisão de código: Fio
 
+
+## Atualização local — 23/09/2026
+
+Os achados abaixo são o registro da revisão de 21/09/2026. Nesta atualização, foram corrigidos ISSUE-001 a ISSUE-004 e CR-001 a CR-006:
+
+- exclusão acessível por menu, estado selecionado das opções e progresso nomeado para leitores de tela;
+- data e abas ajustadas para 320 px, além de um teste de widget nessa largura;
+- confirmação de gravação e agendamento com tratamento de falhas e retorno ao estado anterior quando possível;
+- lembretes atrasados incluídos no resumo do dia, com atualização periódica do cabeçalho;
+- verificação da permissão de alarme exato em cada agendamento, erro visível quando o fuso local não puder ser configurado e leitura resiliente de registros inválidos;
+- ícone monocromático próprio para notificações Android.
+
+Verificações: flutter analyze sem problemas, 11 testes aprovados e flutter build apk --debug --no-pub concluído em modo offline. O comportamento real das permissões e notificações ainda precisa ser conferido em um aparelho Android; não havia um conectado nesta revisão.
+
+
 | Campo | Valor |
 |---|---|
 | Data | 21/09/2026 |

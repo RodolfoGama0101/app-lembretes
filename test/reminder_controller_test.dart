@@ -47,6 +47,99 @@ void main() {
     expect(notifications.cancelled, hasLength(1));
   });
 
+  test('falha ao agendar não salva um lembrete sem aviso', () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService()..failNextSchedule = true;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+
+    await expectLater(
+      controller.add(
+        title: 'Enviar documento',
+        notes: '',
+        scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+        kind: NotificationKind.temporary,
+      ),
+      throwsStateError,
+    );
+
+    expect(controller.active, isEmpty);
+    expect(repository.items, isEmpty);
+  });
+
+  test('permissão negada mantém o lembrete e informa a ausência do alerta',
+      () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService()..permissionGranted = false;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+
+    final permitted = await controller.add(
+      title: 'Enviar documento',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      kind: NotificationKind.temporary,
+    );
+
+    expect(permitted, isFalse);
+    expect(repository.items, hasLength(1));
+    expect(notifications.scheduled, isEmpty);
+  });
+
+  test('falha na edição conserva o lembrete anterior', () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Título original',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+      kind: NotificationKind.temporary,
+    );
+    final original = controller.active.single;
+    notifications.failNextSchedule = true;
+
+    await expectLater(
+      controller.update(original.copyWith(title: 'Título novo')),
+      throwsStateError,
+    );
+
+    expect(controller.active.single.title, 'Título original');
+    expect(repository.items.single.title, 'Título original');
+    expect(notifications.scheduled.last.title, 'Título original');
+  });
+
+  test('lembrete atrasado continua pendente hoje', () async {
+    final now = DateTime.now();
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'late',
+          notificationId: 7,
+          title: 'Tarefa atrasada',
+          scheduledAt: DateTime(now.year, now.month, now.day),
+          kind: NotificationKind.temporary,
+          createdAt: now.subtract(const Duration(hours: 1)),
+        ),
+      ];
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+
+    expect(controller.oldestOverdue?.title, 'Tarefa atrasada');
+    expect(controller.remainingToday, 1);
+    expect(controller.todayProgress, 0);
+  });
+
   test('serialização preserva o tipo de notificação', () {
     final original = Reminder(
       id: '1',
@@ -81,6 +174,8 @@ class _MemoryRepository implements ReminderRepository {
 class _FakeNotificationService implements NotificationService {
   final List<Reminder> scheduled = [];
   final List<int> cancelled = [];
+  bool permissionGranted = true;
+  bool failNextSchedule = false;
 
   @override
   Future<void> cancel(int notificationId) async {
@@ -91,10 +186,14 @@ class _FakeNotificationService implements NotificationService {
   Future<void> initialize() async {}
 
   @override
-  Future<bool> requestPermission() async => true;
+  Future<bool> requestPermission() async => permissionGranted;
 
   @override
   Future<void> schedule(Reminder reminder) async {
+    if (failNextSchedule) {
+      failNextSchedule = false;
+      throw StateError('Agendamento falhou');
+    }
     scheduled.add(reminder);
   }
 }

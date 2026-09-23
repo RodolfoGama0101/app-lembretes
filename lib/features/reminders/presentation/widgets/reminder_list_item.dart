@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -72,27 +73,33 @@ class ReminderListItem extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        decoration: reminder.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: reminder.isCompleted
-                            ? AppColors.muted
-                            : AppColors.ink,
-                      ),
+                            decoration: reminder.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: reminder.isCompleted
+                                ? AppColors.muted
+                                : AppColors.ink,
+                          ),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         Icon(
-                          persistent
-                              ? Icons.push_pin_outlined
-                              : Icons.notifications_none,
+                          kIsWeb
+                              ? Icons.notifications_off_outlined
+                              : persistent
+                                  ? Icons.push_pin_outlined
+                                  : Icons.notifications_none,
                           size: 15,
                           color: AppColors.muted,
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          persistent ? 'Fixa' : 'Temporária',
+                          kIsWeb
+                              ? 'Sem notificação'
+                              : persistent
+                                  ? 'Fixa'
+                                  : 'Temporária',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         if (reminder.isPast && !reminder.isCompleted) ...[
@@ -111,19 +118,34 @@ class ReminderListItem extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: onToggle,
-                tooltip: reminder.isCompleted
-                    ? 'Marcar como pendente'
-                    : 'Marcar como concluído',
-                icon: Icon(
-                  reminder.isCompleted
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: reminder.isCompleted
-                      ? AppColors.blue
-                      : AppColors.muted,
-                ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: onToggle,
+                    tooltip: reminder.isCompleted
+                        ? 'Marcar como pendente'
+                        : 'Marcar como concluído',
+                    icon: Icon(
+                      reminder.isCompleted
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: reminder.isCompleted
+                          ? AppColors.blue
+                          : AppColors.muted,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Mais opções para ${reminder.title}',
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'delete') onDelete();
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'delete', child: Text('Excluir')),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

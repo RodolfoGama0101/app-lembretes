@@ -25,6 +25,11 @@ flutter run
 
 Na primeira criação de lembrete, permita notificações e, no Android, alarmes exatos. Se o segundo acesso não for concedido, o Fio usa um agendamento aproximado automaticamente.
 
+
+### Prévia local no navegador
+
+`flutter run -d chrome` abre o Fio no Chrome após `flutter pub get`. Os lembretes ficam no armazenamento local desse navegador; limpar os dados do site os remove. A prévia Web não envia notificações, inclusive quando a aba está fechada. Para testar alertas, use Android ou iOS.
+
 ## Arquitetura
 
 A implementação separa domínio, persistência, notificações e apresentação. Essa fronteira permite trocar o repositório local por banco ou API sem reescrever as telas e regras de negócio.
