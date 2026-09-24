@@ -21,13 +21,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   _HomeList _selectedList = _HomeList.active;
   late final Timer _clock;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _clock = Timer.periodic(
       const Duration(minutes: 1),
       (_) => setState(() {}),
@@ -37,7 +38,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _clock.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(widget.controller.restorePersistentNotifications());
+    }
   }
 
   Future<void> _runAction(Future<void> Function() action) async {

@@ -41,8 +41,25 @@ class ReminderController extends ChangeNotifier {
     _reminders
       ..clear()
       ..addAll(await _repository.load());
+    await restorePersistentNotifications();
     notifyListeners();
   }
+
+  Future<void> restorePersistentNotifications() async {
+    for (final reminder in _reminders) {
+      if (_shouldShowPersistent(reminder)) {
+        try {
+          await _notificationService.restorePersistent(reminder);
+        } catch (_) {
+          // A notification failure must not prevent access to saved reminders.
+        }
+      }
+    }
+  }
+
+  bool _shouldShowPersistent(Reminder reminder) =>
+      reminder.kind == NotificationKind.persistent &&
+      (!reminder.isCompleted || reminder.keepNotificationAfterCompletion);
 
   Reminder? get oldestOverdue {
     final now = DateTime.now();
@@ -74,10 +91,11 @@ class ReminderController extends ChangeNotifier {
       notes: notes.trim(),
       scheduledAt: scheduledAt,
       kind: kind,
+      keepNotificationAfterCompletion: kind == NotificationKind.persistent,
       createdAt: now,
     );
 
-    final permitted = await _notificationService.requestPermission();
+    final permitted = await _notificationService.requestPermission(kind);
     if (permitted) await _notificationService.schedule(reminder);
     try {
       await _repository.save([..._reminders, reminder]);
@@ -101,26 +119,42 @@ class ReminderController extends ChangeNotifier {
     if (index < 0) return true;
 
     final previous = _reminders[index];
-    final shouldSchedule =
-        !updated.isCompleted && updated.scheduledAt.isAfter(DateTime.now());
-    final permitted =
-        !shouldSchedule || await _notificationService.requestPermission();
-    await _notificationService.cancel(previous.notificationId);
+    final replaceVisiblePersistent =
+        _shouldShowPersistent(previous) && _shouldShowPersistent(updated);
+    final notificationUnchanged = replaceVisiblePersistent &&
+        previous.title == updated.title &&
+        previous.notes == updated.notes;
+    final shouldSchedule = _shouldShowPersistent(updated) ||
+        (updated.kind == NotificationKind.temporary &&
+            !updated.isCompleted &&
+            updated.scheduledAt.isAfter(DateTime.now()));
+    final permitted = notificationUnchanged ||
+        !shouldSchedule ||
+        await _notificationService.requestPermission(updated.kind);
+    if (!notificationUnchanged && !replaceVisiblePersistent) {
+      await _notificationService.cancel(previous.notificationId);
+    }
     try {
-      if (shouldSchedule && permitted) {
+      if (!notificationUnchanged && shouldSchedule && permitted) {
         await _notificationService.schedule(updated);
       }
       final next = [..._reminders]..[index] = updated;
       await _repository.save(next);
     } catch (_) {
-      try {
-        await _notificationService.cancel(updated.notificationId);
-        if (!previous.isCompleted &&
-            previous.scheduledAt.isAfter(DateTime.now())) {
-          await _notificationService.schedule(previous);
+      if (!notificationUnchanged) {
+        try {
+          if (!replaceVisiblePersistent) {
+            await _notificationService.cancel(updated.notificationId);
+          }
+          if (_shouldShowPersistent(previous) ||
+              (previous.kind == NotificationKind.temporary &&
+                  !previous.isCompleted &&
+                  previous.scheduledAt.isAfter(DateTime.now()))) {
+            await _notificationService.schedule(previous);
+          }
+        } catch (_) {
+          // Preserve the original failure for the caller.
         }
-      } catch (_) {
-        // Preserve the original failure for the caller.
       }
       rethrow;
     }
@@ -130,7 +164,13 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<void> toggleCompleted(Reminder reminder) async {
-    await update(reminder.copyWith(isCompleted: !reminder.isCompleted));
+    await update(
+      reminder.copyWith(
+        isCompleted: !reminder.isCompleted,
+        keepNotificationAfterCompletion:
+            reminder.kind == NotificationKind.persistent,
+      ),
+    );
   }
 
   Future<void> remove(Reminder reminder) async {
@@ -140,8 +180,10 @@ class ReminderController extends ChangeNotifier {
         _reminders.where((item) => item.id != reminder.id).toList(),
       );
     } catch (_) {
-      if (!reminder.isCompleted &&
-          reminder.scheduledAt.isAfter(DateTime.now())) {
+      if (_shouldShowPersistent(reminder) ||
+          (reminder.kind == NotificationKind.temporary &&
+              !reminder.isCompleted &&
+              reminder.scheduledAt.isAfter(DateTime.now()))) {
         try {
           await _notificationService.schedule(reminder);
         } catch (_) {

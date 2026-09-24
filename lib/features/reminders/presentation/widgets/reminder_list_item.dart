@@ -98,7 +98,7 @@ class ReminderListItem extends StatelessWidget {
                           kIsWeb
                               ? 'Sem notificação'
                               : persistent
-                                  ? 'Fixa'
+                                  ? 'Permanente'
                                   : 'Temporária',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),

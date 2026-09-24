@@ -92,7 +92,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                     : null,
               ),
               const SizedBox(height: 24),
-              const _FieldLabel('Quando?'),
+              const _FieldLabel('Quando fazer?'),
               const SizedBox(height: 8),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -121,6 +121,13 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 },
               ),
               if (!kIsWeb) ...[
+                if (_kind == NotificationKind.persistent) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Esse horário organiza a tarefa. A notificação aparece ao salvar.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const _FieldLabel('Tipo de notificação'),
                 const SizedBox(height: 8),
@@ -134,9 +141,9 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 ),
                 const SizedBox(height: 8),
                 _NotificationOption(
-                  title: 'Fixa',
+                  title: 'Permanente',
                   description:
-                      'Permanece no painel até você concluir a tarefa.',
+                      'Aparece ao salvar. Concluir não a remove; excluir o lembrete, sim.',
                   icon: Icons.push_pin_outlined,
                   selected: _kind == NotificationKind.persistent,
                   onTap: () =>

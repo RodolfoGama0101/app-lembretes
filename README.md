@@ -1,18 +1,17 @@
 # Fio
 
-Fio é um aplicativo Flutter de lembretes locais. Ele foi desenhado para registrar uma tarefa em poucos toques e avisar no horário escolhido, sem conta, servidor ou coleta de dados.
+Fio é um aplicativo Flutter de lembretes locais. Ele registra tarefas em poucos toques, sem conta, servidor ou coleta de dados.
 
 ## O que já funciona
 
 - criação, edição, conclusão e exclusão de lembretes;
-- notificações locais agendadas;
-- notificação temporária, dispensável normalmente;
-- notificação fixa no Android, mantida no painel até o lembrete ser concluído no app;
+- notificação temporária agendada para o horário escolhido, dispensável normalmente;
+- notificação permanente exibida ao salvar, mantida após concluir e removida ao excluir o lembrete;
 - armazenamento no próprio aparelho com `SharedPreferences`;
-- restauração de notificações agendadas após reiniciar o Android;
+- restauração dos alertas temporários agendados após reiniciar o Android e das notificações permanentes quando o app é aberto;
 - interface em português e testes unitários/de widget.
 
-> No iOS, o sistema não permite notificações realmente não dispensáveis. A opção **Fixa** é exibida como uma notificação local normal nessa plataforma.
+> O Android 14 ou posterior pode permitir dispensar uma notificação permanente pelo painel, mesmo com `ongoing: true`. O Fio a restaura ao abrir ou retomar o app. No iOS, a notificação também pode ser dispensada pelo sistema.
 
 ## Executar
 
@@ -23,7 +22,7 @@ flutter pub get
 flutter run
 ```
 
-Na primeira criação de lembrete, permita notificações e, no Android, alarmes exatos. Se o segundo acesso não for concedido, o Fio usa um agendamento aproximado automaticamente.
+Na primeira criação de lembrete, permita notificações. Para alertas temporários no Android, permita também alarmes exatos. Se esse acesso não for concedido, o Fio usa um agendamento aproximado. Notificações permanentes aparecem imediatamente e não precisam dessa permissão de alarme.
 
 
 ### Prévia local no navegador

@@ -29,13 +29,13 @@ class LocalNotificationService implements NotificationService {
   }
 
   @override
-  Future<bool> requestPermission() async {
+  Future<bool> requestPermission(NotificationKind kind) async {
     if (Platform.isAndroid) {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       final notificationsAllowed =
           await android?.requestNotificationsPermission() ?? true;
-      if (notificationsAllowed) {
+      if (notificationsAllowed && kind == NotificationKind.temporary) {
         await android?.requestExactAlarmsPermission();
       }
       return notificationsAllowed;
@@ -58,14 +58,15 @@ class LocalNotificationService implements NotificationService {
     final persistent = reminder.kind == NotificationKind.persistent;
     final androidDetails = AndroidNotificationDetails(
       persistent ? 'fio_persistent' : 'fio_temporary',
-      persistent ? 'Lembretes fixos' : 'Lembretes temporários',
+      persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
       channelDescription: persistent
-          ? 'Lembretes que permanecem até serem dispensados'
+          ? 'Lembretes que aparecem ao salvar e ficam até a exclusão'
           : 'Lembretes que podem ser dispensados normalmente',
       importance: Importance.max,
       priority: Priority.high,
       ongoing: persistent,
       autoCancel: !persistent,
+      onlyAlertOnce: persistent,
       category: AndroidNotificationCategory.reminder,
     );
 
@@ -77,6 +78,21 @@ class LocalNotificationService implements NotificationService {
         presentSound: true,
       ),
     );
+
+    if (persistent) {
+      final pending = await _plugin.pendingNotificationRequests();
+      if (pending.any((request) => request.id == reminder.notificationId)) {
+        await _plugin.cancel(reminder.notificationId);
+      }
+      await _plugin.show(
+        reminder.notificationId,
+        reminder.title,
+        reminder.notes.isEmpty ? 'Lembrete permanente' : reminder.notes,
+        details,
+        payload: reminder.id,
+      );
+      return;
+    }
 
     final canScheduleExactAlarms = Platform.isAndroid
         ? await _plugin
@@ -97,6 +113,19 @@ class LocalNotificationService implements NotificationService {
           : AndroidScheduleMode.inexactAllowWhileIdle,
       payload: reminder.id,
     );
+  }
+
+  @override
+  Future<void> restorePersistent(Reminder reminder) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final active = await _plugin.getActiveNotifications();
+      if (active.any(
+        (notification) => notification.id == reminder.notificationId,
+      )) {
+        return;
+      }
+    }
+    await schedule(reminder);
   }
 
   @override

@@ -25,7 +25,7 @@ SharedPreferences (JSON)
 
 ### Aplicação e domínio
 
-`ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável e `NotificationKind` diferencia alertas temporários de fixos.
+`ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável e `NotificationKind` diferencia alertas temporários de permanentes.
 
 ### Dados
 
@@ -33,14 +33,14 @@ SharedPreferences (JSON)
 
 ### Integração nativa
 
-`LocalNotificationService` encapsula o plugin de notificações, fuso horário, permissões e canais Android. O canal fixo usa `ongoing: true`; o temporário permite dispensa normal.
+`LocalNotificationService` encapsula o plugin de notificações, fuso horário, permissões e canais Android. A notificação permanente usa `ongoing: true` e aparece imediatamente; a temporária é agendada e permite dispensa normal.
 
 ## Fluxo principal
 
 1. O usuário informa título, data, hora e tipo.
-2. O controlador cria um identificador local e persiste o lembrete.
-3. O serviço agenda a notificação no fuso horário do aparelho.
-4. Ao concluir ou excluir, o controlador cancela a notificação e atualiza o armazenamento.
+2. O controlador cria um identificador local, publica ou agenda a notificação e persiste o lembrete.
+3. O tipo permanente aparece imediatamente; o temporário é agendado no fuso horário do aparelho.
+4. Concluir cancela o alerta temporário, mas preserva o permanente. Excluir cancela qualquer notificação do lembrete.
 
 ## Evolução para banco de dados
 
@@ -55,5 +55,5 @@ Essa evolução não exige alterar os widgets; apenas a composição do reposit�
 
 - Sem recorrência na primeira versão para manter o fluxo simples.
 - Sem autenticação ou rede.
-- Alarmes exatos são solicitados no Android; quando negados, usa-se agendamento aproximado.
-- Notificação fixa real é uma capacidade do Android. O iOS mantém seu comportamento padrão de notificações locais.
+- Alarmes exatos são solicitados para alertas temporários no Android; quando negados, usa-se agendamento aproximado.
+- O Android 14 ou posterior pode permitir que o usuário dispense notificações `ongoing` pelo painel. O app restaura as permanentes ao abrir ou retomar. No iOS, o sistema também permite dispensá-las.

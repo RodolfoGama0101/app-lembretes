@@ -24,6 +24,7 @@ void main() {
     expect(controller.active.single.title, 'Ligar para o médico');
     expect(repository.items, hasLength(1));
     expect(notifications.scheduled, hasLength(1));
+    expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
   });
 
   test('concluir cancela a notificação e move o item', () async {
@@ -116,6 +117,103 @@ void main() {
     expect(notifications.scheduled.last.title, 'Título original');
   });
 
+  test('restaura notificações permanentes ativas ao abrir o app', () async {
+    final now = DateTime.now();
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'permanent',
+          notificationId: 1,
+          title: 'Visível agora',
+          scheduledAt: now.subtract(const Duration(hours: 1)),
+          kind: NotificationKind.persistent,
+          createdAt: now.subtract(const Duration(days: 1)),
+        ),
+        Reminder(
+          id: 'temporary',
+          notificationId: 2,
+          title: 'Somente no horário',
+          scheduledAt: now.add(const Duration(hours: 1)),
+          kind: NotificationKind.temporary,
+          createdAt: now,
+        ),
+        Reminder(
+          id: 'done',
+          notificationId: 3,
+          title: 'Já concluído',
+          scheduledAt: now,
+          kind: NotificationKind.persistent,
+          isCompleted: true,
+          createdAt: now,
+        ),
+      ];
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+
+    await controller.load();
+
+    expect(notifications.restored.map((item) => item.id), ['permanent']);
+  });
+
+  test('concluir um permanente não remove a notificação até excluí-lo',
+      () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Verificar tarefa',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      kind: NotificationKind.persistent,
+    );
+    final original = controller.active.single;
+    final overdue = original.copyWith(
+      scheduledAt: DateTime.now().subtract(const Duration(hours: 1)),
+    );
+
+    await controller.update(overdue);
+    await controller.toggleCompleted(controller.active.single);
+    await controller.toggleCompleted(controller.completed.single);
+
+    expect(notifications.scheduled, hasLength(1));
+    expect(notifications.cancelled, isEmpty);
+    expect(controller.active, hasLength(1));
+
+    await controller.toggleCompleted(controller.active.single);
+    expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
+    await controller.load();
+    expect(notifications.restored.single.id, original.id);
+
+    await controller.remove(controller.completed.single);
+    expect(notifications.cancelled, [original.notificationId]);
+    expect(controller.reminders, isEmpty);
+  });
+
+  test('excluir um permanente vencido remove a notificação', () async {
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Apagar',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 1)),
+      kind: NotificationKind.persistent,
+    );
+
+    await controller.remove(controller.active.single);
+
+    expect(notifications.cancelled, hasLength(1));
+    expect(controller.reminders, isEmpty);
+  });
+
   test('lembrete atrasado continua pendente hoje', () async {
     final now = DateTime.now();
     final repository = _MemoryRepository()
@@ -156,6 +254,25 @@ void main() {
     expect(restored.title, original.title);
     expect(restored.kind, NotificationKind.persistent);
     expect(restored.scheduledAt, original.scheduledAt);
+    expect(restored.keepNotificationAfterCompletion, isFalse);
+  });
+
+  test('serialização preserva permanência após conclusão', () {
+    final reminder = Reminder(
+      id: '2',
+      notificationId: 11,
+      title: 'Até excluir',
+      scheduledAt: DateTime(2030, 4, 3, 9, 30),
+      kind: NotificationKind.persistent,
+      isCompleted: true,
+      keepNotificationAfterCompletion: true,
+      createdAt: DateTime(2030, 4, 1),
+    );
+
+    final restored = Reminder.fromJson(reminder.toJson());
+
+    expect(restored.keepNotificationAfterCompletion, isTrue);
+    expect(restored.isCompleted, isTrue);
   });
 }
 
@@ -174,6 +291,7 @@ class _MemoryRepository implements ReminderRepository {
 class _FakeNotificationService implements NotificationService {
   final List<Reminder> scheduled = [];
   final List<int> cancelled = [];
+  final List<Reminder> restored = [];
   bool permissionGranted = true;
   bool failNextSchedule = false;
 
@@ -186,7 +304,13 @@ class _FakeNotificationService implements NotificationService {
   Future<void> initialize() async {}
 
   @override
-  Future<bool> requestPermission() async => permissionGranted;
+  Future<bool> requestPermission(NotificationKind kind) async =>
+      permissionGranted;
+
+  @override
+  Future<void> restorePersistent(Reminder reminder) async {
+    restored.add(reminder);
+  }
 
   @override
   Future<void> schedule(Reminder reminder) async {

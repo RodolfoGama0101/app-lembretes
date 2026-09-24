@@ -9,6 +9,7 @@ class Reminder {
     required this.kind,
     this.notes = '',
     this.isCompleted = false,
+    this.keepNotificationAfterCompletion = false,
     required this.createdAt,
   });
 
@@ -19,6 +20,7 @@ class Reminder {
   final DateTime scheduledAt;
   final NotificationKind kind;
   final bool isCompleted;
+  final bool keepNotificationAfterCompletion;
   final DateTime createdAt;
 
   bool get isPast => scheduledAt.isBefore(DateTime.now());
@@ -29,6 +31,7 @@ class Reminder {
     DateTime? scheduledAt,
     NotificationKind? kind,
     bool? isCompleted,
+    bool? keepNotificationAfterCompletion,
   }) {
     return Reminder(
       id: id,
@@ -38,20 +41,23 @@ class Reminder {
       scheduledAt: scheduledAt ?? this.scheduledAt,
       kind: kind ?? this.kind,
       isCompleted: isCompleted ?? this.isCompleted,
+      keepNotificationAfterCompletion: keepNotificationAfterCompletion ??
+          this.keepNotificationAfterCompletion,
       createdAt: createdAt,
     );
   }
 
   Map<String, Object?> toJson() => {
-    'id': id,
-    'notificationId': notificationId,
-    'title': title,
-    'notes': notes,
-    'scheduledAt': scheduledAt.toIso8601String(),
-    'kind': kind.name,
-    'isCompleted': isCompleted,
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'notificationId': notificationId,
+        'title': title,
+        'notes': notes,
+        'scheduledAt': scheduledAt.toIso8601String(),
+        'kind': kind.name,
+        'isCompleted': isCompleted,
+        'keepNotificationAfterCompletion': keepNotificationAfterCompletion,
+        'createdAt': createdAt.toIso8601String(),
+      };
 
   factory Reminder.fromJson(Map<String, Object?> json) {
     return Reminder(
@@ -62,6 +68,8 @@ class Reminder {
       scheduledAt: DateTime.parse(json['scheduledAt']! as String),
       kind: NotificationKind.values.byName(json['kind']! as String),
       isCompleted: (json['isCompleted'] as bool?) ?? false,
+      keepNotificationAfterCompletion:
+          (json['keepNotificationAfterCompletion'] as bool?) ?? false,
       createdAt: DateTime.parse(json['createdAt']! as String),
     );
   }
