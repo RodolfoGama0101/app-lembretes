@@ -47,6 +47,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Tipo de notificação'),
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
     expect(
       find.byWidgetPredicate(
         (widget) => widget is Semantics && widget.properties.selected == true,
@@ -131,6 +142,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.items, isEmpty);
     expect(find.text('Nenhum lembrete'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('sem horário oculta data e salva aviso permanente',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.load();
+
+    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Sem prazo');
+    await tester.tap(find.text('Sem horário'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsNothing);
+    expect(find.text('Tipo de notificação'), findsNothing);
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.kind, NotificationKind.unscheduled);
+    expect(repository.items.single.scheduledAt, isNull);
+    expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
+    expect(find.text('Sem horário'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

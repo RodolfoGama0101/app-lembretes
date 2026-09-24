@@ -181,7 +181,7 @@ void main() {
     await controller.toggleCompleted(controller.active.single);
     await controller.toggleCompleted(controller.completed.single);
 
-    expect(notifications.scheduled, hasLength(1));
+    expect(notifications.scheduled, hasLength(2));
     expect(notifications.cancelled, isEmpty);
     expect(controller.active, hasLength(1));
 
@@ -273,6 +273,85 @@ void main() {
 
     expect(restored.keepNotificationAfterCompletion, isTrue);
     expect(restored.isCompleted, isTrue);
+  });
+  test('sem horário publica aviso permanente e o mantém até excluir', () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+
+    await controller.add(
+      title: 'Lembrete contínuo',
+      notes: '',
+      scheduledAt: null,
+      kind: NotificationKind.unscheduled,
+    );
+
+    final reminder = controller.active.single;
+    expect(reminder.scheduledAt, isNull);
+    expect(reminder.isPersistent, isTrue);
+    expect(reminder.keepNotificationAfterCompletion, isTrue);
+    expect(notifications.scheduled.single.id, reminder.id);
+    expect(controller.nextReminder, isNull);
+    expect(controller.oldestOverdue, isNull);
+    expect(controller.remainingToday, 0);
+
+    await controller.toggleCompleted(reminder);
+    expect(notifications.cancelled, isEmpty);
+    await controller.load();
+    expect(notifications.restored.single.id, reminder.id);
+
+    await controller.remove(controller.completed.single);
+    expect(notifications.cancelled, [reminder.notificationId]);
+    expect(repository.items, isEmpty);
+  });
+
+  test('alternar entre com e sem horário atualiza a notificação', () async {
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Trocar tipo',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+      kind: NotificationKind.temporary,
+    );
+    final timed = controller.active.single;
+
+    await controller.update(timed.copyWith(kind: NotificationKind.unscheduled));
+    expect(controller.active.single.scheduledAt, isNull);
+    expect(notifications.cancelled, [timed.notificationId]);
+    expect(notifications.scheduled.last.kind, NotificationKind.unscheduled);
+
+    await controller.update(controller.active.single.copyWith(
+      kind: NotificationKind.temporary,
+      scheduledAt: DateTime.now().add(const Duration(days: 1)),
+      keepNotificationAfterCompletion: false,
+    ));
+    expect(controller.active.single.scheduledAt, isNotNull);
+    expect(notifications.cancelled, hasLength(2));
+    expect(notifications.scheduled.last.kind, NotificationKind.temporary);
+  });
+
+  test('serialização de lembrete sem horário preserva a permanência', () {
+    final original = Reminder(
+      id: 'no-time',
+      notificationId: 42,
+      title: 'Sempre visível',
+      scheduledAt: null,
+      kind: NotificationKind.unscheduled,
+      createdAt: DateTime(2030, 4, 1),
+    );
+
+    final restored = Reminder.fromJson(original.toJson());
+
+    expect(restored.scheduledAt, isNull);
+    expect(restored.kind, NotificationKind.unscheduled);
+    expect(restored.keepNotificationAfterCompletion, isTrue);
   });
 }
 

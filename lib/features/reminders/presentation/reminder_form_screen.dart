@@ -26,6 +26,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   late final TextEditingController _notesController;
   late DateTime _scheduledAt;
   late NotificationKind _kind;
+  late NotificationKind _lastTimedKind;
   bool _saving = false;
 
   bool get _isEditing => widget.reminder != null;
@@ -45,6 +46,9 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           initialDate.hour,
         );
     _kind = reminder?.kind ?? NotificationKind.temporary;
+    _lastTimedKind = _kind == NotificationKind.persistent
+        ? NotificationKind.persistent
+        : NotificationKind.temporary;
   }
 
   @override
@@ -105,63 +109,93 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
               const SizedBox(height: 28),
               const _FieldLabel('Quando fazer?'),
               const SizedBox(height: 8),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final date = _PickerButton(
-                    icon: Icons.calendar_today_outlined,
-                    caption: 'Data',
-                    value: DateFormat('dd/MM/yyyy').format(_scheduledAt),
-                    onPressed: _pickDate,
-                  );
-                  final time = _PickerButton(
-                    icon: Icons.schedule_rounded,
-                    caption: 'Hora',
-                    value: DateFormat('HH:mm').format(_scheduledAt),
-                    onPressed: _pickTime,
-                  );
-                  if (constraints.maxWidth < 360) {
-                    return Column(
-                      children: [date, const SizedBox(height: 8), time],
-                    );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(child: date),
-                      const SizedBox(width: 8),
-                      Expanded(child: time),
-                    ],
-                  );
-                },
+              Material(
+                color: Theme.of(context).colorScheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: Theme.of(context).dividerColor),
+                ),
+                child: SwitchListTile.adaptive(
+                  title: const Text('Sem horário'),
+                  subtitle: Text(
+                    kIsWeb
+                        ? 'Fica na lista sem data ou hora.'
+                        : 'Aviso permanente até excluir.',
+                  ),
+                  secondary: Icon(
+                    Icons.push_pin_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  value: _kind == NotificationKind.unscheduled,
+                  onChanged: (enabled) => setState(() {
+                    _kind =
+                        enabled ? NotificationKind.unscheduled : _lastTimedKind;
+                  }),
+                ),
               ),
-              if (!kIsWeb) ...[
-                if (_kind == NotificationKind.persistent) ...[
+              if (_kind != NotificationKind.unscheduled) ...[
+                const SizedBox(height: 8),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final date = _PickerButton(
+                      icon: Icons.calendar_today_outlined,
+                      caption: 'Data',
+                      value: DateFormat('dd/MM/yyyy').format(_scheduledAt),
+                      onPressed: _pickDate,
+                    );
+                    final time = _PickerButton(
+                      icon: Icons.schedule_rounded,
+                      caption: 'Hora',
+                      value: DateFormat('HH:mm').format(_scheduledAt),
+                      onPressed: _pickTime,
+                    );
+                    if (constraints.maxWidth < 360) {
+                      return Column(
+                        children: [date, const SizedBox(height: 8), time],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: date),
+                        const SizedBox(width: 8),
+                        Expanded(child: time),
+                      ],
+                    );
+                  },
+                ),
+                if (!kIsWeb) ...[
+                  if (_kind == NotificationKind.persistent) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Esse horário organiza a tarefa. A notificação aparece ao salvar.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  const SizedBox(height: 28),
+                  const _FieldLabel('Tipo de notificação'),
                   const SizedBox(height: 8),
-                  Text(
-                    'Esse horário organiza a tarefa. A notificação aparece ao salvar.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  _NotificationOption(
+                    title: 'Temporária',
+                    description: 'Avisa no horário e pode ser dispensada.',
+                    icon: Icons.notifications_none_rounded,
+                    selected: _kind == NotificationKind.temporary,
+                    onTap: () => setState(() {
+                      _kind = NotificationKind.temporary;
+                      _lastTimedKind = _kind;
+                    }),
+                  ),
+                  const SizedBox(height: 8),
+                  _NotificationOption(
+                    title: 'Permanente',
+                    description: 'Aparece ao salvar e fica até excluir.',
+                    icon: Icons.notifications_active_outlined,
+                    selected: _kind == NotificationKind.persistent,
+                    onTap: () => setState(() {
+                      _kind = NotificationKind.persistent;
+                      _lastTimedKind = _kind;
+                    }),
                   ),
                 ],
-                const SizedBox(height: 28),
-                const _FieldLabel('Tipo de notificação'),
-                const SizedBox(height: 8),
-                _NotificationOption(
-                  title: 'Temporária',
-                  description: 'Pode ser dispensada normalmente.',
-                  icon: Icons.notifications_none,
-                  selected: _kind == NotificationKind.temporary,
-                  onTap: () =>
-                      setState(() => _kind = NotificationKind.temporary),
-                ),
-                const SizedBox(height: 8),
-                _NotificationOption(
-                  title: 'Permanente',
-                  description:
-                      'Aparece ao salvar. Concluir não a remove; excluir o lembrete, sim.',
-                  icon: Icons.push_pin_outlined,
-                  selected: _kind == NotificationKind.persistent,
-                  onTap: () =>
-                      setState(() => _kind = NotificationKind.persistent),
-                ),
               ],
               const SizedBox(height: 28),
               const _FieldLabel('Observação (opcional)'),
@@ -255,7 +289,8 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_scheduledAt.isAfter(DateTime.now())) {
+    if (_kind != NotificationKind.unscheduled &&
+        !_scheduledAt.isAfter(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escolha um horário futuro.')),
       );
@@ -270,15 +305,19 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           widget.reminder!.copyWith(
             title: _titleController.text.trim(),
             notes: _notesController.text.trim(),
-            scheduledAt: _scheduledAt,
+            scheduledAt:
+                _kind == NotificationKind.unscheduled ? null : _scheduledAt,
             kind: _kind,
+            keepNotificationAfterCompletion:
+                _kind != NotificationKind.temporary,
           ),
         );
       } else {
         permissionGranted = await widget.controller.add(
           title: _titleController.text,
           notes: _notesController.text,
-          scheduledAt: _scheduledAt,
+          scheduledAt:
+              _kind == NotificationKind.unscheduled ? null : _scheduledAt,
           kind: _kind,
         );
       }

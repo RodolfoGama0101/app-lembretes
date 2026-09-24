@@ -58,14 +58,17 @@ class LocalNotificationService implements NotificationService {
 
   @override
   Future<void> schedule(Reminder reminder) async {
-    final persistent = reminder.kind == NotificationKind.persistent;
-    final when =
-        DateFormat('dd/MM • HH:mm', 'pt_BR').format(reminder.scheduledAt);
+    final persistent = reminder.isPersistent;
+    final when = reminder.isUnscheduled
+        ? 'Sem horário'
+        : DateFormat('dd/MM • HH:mm', 'pt_BR').format(reminder.scheduledAt!);
     final body = reminder.notes.isNotEmpty
         ? reminder.notes
-        : persistent
-            ? 'Lembrete fixado no painel'
-            : 'Está na hora deste lembrete.';
+        : reminder.isUnscheduled
+            ? 'Lembrete sem horário, fixado no painel'
+            : persistent
+                ? 'Lembrete fixado no painel'
+                : 'Está na hora deste lembrete.';
     final androidDetails = AndroidNotificationDetails(
       persistent ? 'fio_persistent' : 'fio_temporary',
       persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
@@ -125,7 +128,7 @@ class LocalNotificationService implements NotificationService {
       reminder.notificationId,
       reminder.title,
       body,
-      tz.TZDateTime.from(reminder.scheduledAt, tz.local),
+      tz.TZDateTime.from(reminder.scheduledAt!, tz.local),
       details,
       androidScheduleMode: canScheduleExactAlarms
           ? AndroidScheduleMode.exactAllowWhileIdle

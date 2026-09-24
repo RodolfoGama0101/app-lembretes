@@ -1,4 +1,4 @@
-enum NotificationKind { temporary, persistent }
+enum NotificationKind { temporary, persistent, unscheduled }
 
 class Reminder {
   const Reminder({
@@ -9,21 +9,30 @@ class Reminder {
     required this.kind,
     this.notes = '',
     this.isCompleted = false,
-    this.keepNotificationAfterCompletion = false,
+    bool keepNotificationAfterCompletion = false,
     required this.createdAt,
-  });
+  })  : keepNotificationAfterCompletion =
+            kind == NotificationKind.unscheduled ||
+                (kind == NotificationKind.persistent &&
+                    keepNotificationAfterCompletion),
+        assert(
+          (kind == NotificationKind.unscheduled) == (scheduledAt == null),
+          'Only reminders without a time can omit scheduledAt.',
+        );
 
   final String id;
   final int notificationId;
   final String title;
   final String notes;
-  final DateTime scheduledAt;
+  final DateTime? scheduledAt;
   final NotificationKind kind;
   final bool isCompleted;
   final bool keepNotificationAfterCompletion;
   final DateTime createdAt;
 
-  bool get isPast => scheduledAt.isBefore(DateTime.now());
+  bool get isUnscheduled => kind == NotificationKind.unscheduled;
+  bool get isPersistent => kind != NotificationKind.temporary;
+  bool get isPast => scheduledAt?.isBefore(DateTime.now()) ?? false;
 
   Reminder copyWith({
     String? title,
@@ -33,13 +42,16 @@ class Reminder {
     bool? isCompleted,
     bool? keepNotificationAfterCompletion,
   }) {
+    final nextKind = kind ?? this.kind;
     return Reminder(
       id: id,
       notificationId: notificationId,
       title: title ?? this.title,
       notes: notes ?? this.notes,
-      scheduledAt: scheduledAt ?? this.scheduledAt,
-      kind: kind ?? this.kind,
+      scheduledAt: nextKind == NotificationKind.unscheduled
+          ? null
+          : scheduledAt ?? this.scheduledAt,
+      kind: nextKind,
       isCompleted: isCompleted ?? this.isCompleted,
       keepNotificationAfterCompletion: keepNotificationAfterCompletion ??
           this.keepNotificationAfterCompletion,
@@ -52,7 +64,7 @@ class Reminder {
         'notificationId': notificationId,
         'title': title,
         'notes': notes,
-        'scheduledAt': scheduledAt.toIso8601String(),
+        'scheduledAt': scheduledAt?.toIso8601String(),
         'kind': kind.name,
         'isCompleted': isCompleted,
         'keepNotificationAfterCompletion': keepNotificationAfterCompletion,
@@ -60,13 +72,19 @@ class Reminder {
       };
 
   factory Reminder.fromJson(Map<String, Object?> json) {
+    final rawScheduledAt = json['scheduledAt'] as String?;
+    final kind = NotificationKind.values.byName(json['kind']! as String);
+    if ((kind == NotificationKind.unscheduled) != (rawScheduledAt == null)) {
+      throw const FormatException('Tipo e horário incompatíveis.');
+    }
     return Reminder(
       id: json['id']! as String,
       notificationId: json['notificationId']! as int,
       title: json['title']! as String,
       notes: (json['notes'] as String?) ?? '',
-      scheduledAt: DateTime.parse(json['scheduledAt']! as String),
-      kind: NotificationKind.values.byName(json['kind']! as String),
+      scheduledAt:
+          rawScheduledAt == null ? null : DateTime.parse(rawScheduledAt),
+      kind: kind,
       isCompleted: (json['isCompleted'] as bool?) ?? false,
       keepNotificationAfterCompletion:
           (json['keepNotificationAfterCompletion'] as bool?) ?? false,

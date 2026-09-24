@@ -29,4 +29,23 @@ void main() {
     expect(reminders, hasLength(1));
     expect(reminders.single.id, 'valid');
   });
+  test('restaura lembrete sem horário salvo no dispositivo', () async {
+    final unscheduled = Reminder(
+      id: 'continuous',
+      notificationId: 2,
+      title: 'Sempre visível',
+      scheduledAt: null,
+      kind: NotificationKind.unscheduled,
+      createdAt: DateTime(2030, 4, 1),
+    );
+    SharedPreferences.setMockInitialValues({
+      'fio.reminders.v1': jsonEncode([unscheduled.toJson()]),
+    });
+
+    final reminders = await LocalReminderRepository().load();
+
+    expect(reminders, hasLength(1));
+    expect(reminders.single.scheduledAt, isNull);
+    expect(reminders.single.keepNotificationAfterCompletion, isTrue);
+  });
 }

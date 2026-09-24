@@ -155,8 +155,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _sameDay(DateTime? a, DateTime? b) => a == null || b == null
+      ? a == null && b == null
+      : a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 class _Header extends StatelessWidget {
@@ -167,6 +168,9 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final overdue = controller.oldestOverdue;
     final next = overdue ?? controller.nextReminder;
+    final timeless = controller.active.where((item) => item.isUnscheduled);
+    final pinned = timeless.isEmpty ? null : timeless.first;
+    final featured = next ?? pinned;
     final now = DateTime.now();
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
@@ -203,7 +207,9 @@ class _Header extends StatelessWidget {
                     child: Icon(
                       overdue != null
                           ? Icons.notifications_active_rounded
-                          : Icons.notifications_rounded,
+                          : pinned != null && next == null
+                              ? Icons.push_pin_rounded
+                              : Icons.notifications_rounded,
                       color: accent,
                       size: 23,
                     ),
@@ -216,14 +222,16 @@ class _Header extends StatelessWidget {
                         Text(
                           overdue != null
                               ? 'Lembrete atrasado'
-                              : next == null
-                                  ? 'Tudo em dia'
-                                  : 'Próximo lembrete',
+                              : next != null
+                                  ? 'Próximo lembrete'
+                                  : pinned != null
+                                      ? 'Sem horário • permanente'
+                                      : 'Tudo em dia',
                           style: theme.textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          next?.title ?? 'Nenhum lembrete futuro',
+                          featured?.title ?? 'Nenhum lembrete futuro',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleLarge,
@@ -235,7 +243,7 @@ class _Header extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       DateFormat(overdue == null ? 'HH:mm' : 'dd/MM')
-                          .format(next.scheduledAt),
+                          .format(next.scheduledAt!),
                       style:
                           theme.textTheme.titleLarge?.copyWith(color: accent),
                     ),
@@ -359,19 +367,21 @@ class _SelectorButton extends StatelessWidget {
 
 class _DateDivider extends StatelessWidget {
   const _DateDivider({required this.date});
-  final DateTime date;
+  final DateTime? date;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(date.year, date.month, date.day);
-    final difference = target.difference(today).inDays;
+    final target =
+        date == null ? null : DateTime(date!.year, date!.month, date!.day);
+    final difference = target?.difference(today).inDays;
     final label = switch (difference) {
+      null => 'Sem horário',
       0 => 'Hoje',
       1 => 'Amanhã',
       -1 => 'Ontem',
-      _ => DateFormat("EEEE, dd 'de' MMMM", 'pt_BR').format(date),
+      _ => DateFormat("EEEE, dd 'de' MMMM", 'pt_BR').format(date!),
     };
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 19, 4, 11),

@@ -18,8 +18,16 @@ class ReminderController extends ChangeNotifier {
   final List<Reminder> _reminders = [];
 
   List<Reminder> get reminders {
-    final sorted = [..._reminders]
-      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    final sorted = [..._reminders]..sort((a, b) {
+        final aWhen = a.scheduledAt;
+        final bWhen = b.scheduledAt;
+        if (aWhen == null && bWhen == null) {
+          return b.createdAt.compareTo(a.createdAt);
+        }
+        if (aWhen == null) return -1;
+        if (bWhen == null) return 1;
+        return aWhen.compareTo(bWhen);
+      });
     return List.unmodifiable(sorted);
   }
 
@@ -32,7 +40,7 @@ class ReminderController extends ChangeNotifier {
   Reminder? get nextReminder {
     final now = DateTime.now();
     for (final reminder in active) {
-      if (reminder.scheduledAt.isAfter(now)) return reminder;
+      if (reminder.scheduledAt?.isAfter(now) ?? false) return reminder;
     }
     return null;
   }
@@ -58,13 +66,13 @@ class ReminderController extends ChangeNotifier {
   }
 
   bool _shouldShowPersistent(Reminder reminder) =>
-      reminder.kind == NotificationKind.persistent &&
+      reminder.isPersistent &&
       (!reminder.isCompleted || reminder.keepNotificationAfterCompletion);
 
   Reminder? get oldestOverdue {
     final now = DateTime.now();
     for (final reminder in active) {
-      if (reminder.scheduledAt.isBefore(now)) return reminder;
+      if (reminder.scheduledAt?.isBefore(now) ?? false) return reminder;
     }
     return null;
   }
@@ -72,9 +80,12 @@ class ReminderController extends ChangeNotifier {
   Future<bool> add({
     required String title,
     required String notes,
-    required DateTime scheduledAt,
+    required DateTime? scheduledAt,
     required NotificationKind kind,
   }) async {
+    if ((kind == NotificationKind.unscheduled) != (scheduledAt == null)) {
+      throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
+    }
     final now = DateTime.now();
     var rawId = now.microsecondsSinceEpoch;
     while (_reminders.any(
@@ -91,7 +102,7 @@ class ReminderController extends ChangeNotifier {
       notes: notes.trim(),
       scheduledAt: scheduledAt,
       kind: kind,
-      keepNotificationAfterCompletion: kind == NotificationKind.persistent,
+      keepNotificationAfterCompletion: kind != NotificationKind.temporary,
       createdAt: now,
     );
 
@@ -115,6 +126,10 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<bool> update(Reminder updated) async {
+    if ((updated.kind == NotificationKind.unscheduled) !=
+        (updated.scheduledAt == null)) {
+      throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
+    }
     final index = _reminders.indexWhere((item) => item.id == updated.id);
     if (index < 0) return true;
 
@@ -122,12 +137,14 @@ class ReminderController extends ChangeNotifier {
     final replaceVisiblePersistent =
         _shouldShowPersistent(previous) && _shouldShowPersistent(updated);
     final notificationUnchanged = replaceVisiblePersistent &&
+        previous.kind == updated.kind &&
+        previous.scheduledAt == updated.scheduledAt &&
         previous.title == updated.title &&
         previous.notes == updated.notes;
     final shouldSchedule = _shouldShowPersistent(updated) ||
         (updated.kind == NotificationKind.temporary &&
             !updated.isCompleted &&
-            updated.scheduledAt.isAfter(DateTime.now()));
+            (updated.scheduledAt?.isAfter(DateTime.now()) ?? false));
     final permitted = notificationUnchanged ||
         !shouldSchedule ||
         await _notificationService.requestPermission(updated.kind);
@@ -149,7 +166,7 @@ class ReminderController extends ChangeNotifier {
           if (_shouldShowPersistent(previous) ||
               (previous.kind == NotificationKind.temporary &&
                   !previous.isCompleted &&
-                  previous.scheduledAt.isAfter(DateTime.now()))) {
+                  (previous.scheduledAt?.isAfter(DateTime.now()) ?? false))) {
             await _notificationService.schedule(previous);
           }
         } catch (_) {
@@ -167,8 +184,7 @@ class ReminderController extends ChangeNotifier {
     await update(
       reminder.copyWith(
         isCompleted: !reminder.isCompleted,
-        keepNotificationAfterCompletion:
-            reminder.kind == NotificationKind.persistent,
+        keepNotificationAfterCompletion: reminder.isPersistent,
       ),
     );
   }
@@ -183,7 +199,7 @@ class ReminderController extends ChangeNotifier {
       if (_shouldShowPersistent(reminder) ||
           (reminder.kind == NotificationKind.temporary &&
               !reminder.isCompleted &&
-              reminder.scheduledAt.isAfter(DateTime.now()))) {
+              (reminder.scheduledAt?.isAfter(DateTime.now()) ?? false))) {
         try {
           await _notificationService.schedule(reminder);
         } catch (_) {
@@ -200,7 +216,8 @@ class ReminderController extends ChangeNotifier {
     final now = DateTime.now();
     return active.where((item) {
       final date = item.scheduledAt;
-      return date.year == now.year &&
+      return date != null &&
+          date.year == now.year &&
           date.month == now.month &&
           date.day == now.day;
     }).length;
@@ -211,6 +228,7 @@ class ReminderController extends ChangeNotifier {
     return _reminders.where((item) {
       final date = item.scheduledAt;
       return item.isCompleted &&
+          date != null &&
           date.year == now.year &&
           date.month == now.month &&
           date.day == now.day;

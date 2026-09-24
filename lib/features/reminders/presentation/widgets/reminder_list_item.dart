@@ -21,7 +21,7 @@ class ReminderListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final persistent = reminder.kind == NotificationKind.persistent;
+    final persistent = reminder.isPersistent;
     final accent = theme.colorScheme.primary;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -63,15 +63,19 @@ class ReminderListItem extends StatelessWidget {
                       color: accent.withValues(alpha: .1),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: Text(
-                      DateFormat('HH:mm').format(reminder.scheduledAt),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: accent,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        fontSize: 12,
-                      ),
-                    ),
+                    child: reminder.isUnscheduled
+                        ? Icon(Icons.push_pin_rounded, color: accent, size: 22)
+                        : Text(
+                            DateFormat('HH:mm').format(reminder.scheduledAt!),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: accent,
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                              fontSize: 12,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -95,7 +99,7 @@ class ReminderListItem extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              kIsWeb
+                              kIsWeb && !reminder.isUnscheduled
                                   ? Icons.notifications_off_outlined
                                   : persistent
                                       ? Icons.push_pin_outlined
@@ -106,11 +110,13 @@ class ReminderListItem extends StatelessWidget {
                             const SizedBox(width: 5),
                             Flexible(
                               child: Text(
-                                kIsWeb
-                                    ? 'Sem notificação'
-                                    : persistent
-                                        ? 'Permanente'
-                                        : 'Temporária',
+                                reminder.isUnscheduled
+                                    ? 'Sem horário • permanente'
+                                    : kIsWeb
+                                        ? 'Sem notificação'
+                                        : persistent
+                                            ? 'Permanente'
+                                            : 'Temporária',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodyMedium
