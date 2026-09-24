@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -56,12 +59,28 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<void> schedule(Reminder reminder) async {
     final persistent = reminder.kind == NotificationKind.persistent;
+    final when =
+        DateFormat('dd/MM • HH:mm', 'pt_BR').format(reminder.scheduledAt);
+    final body = reminder.notes.isNotEmpty
+        ? reminder.notes
+        : persistent
+            ? 'Lembrete fixado no painel'
+            : 'Está na hora deste lembrete.';
     final androidDetails = AndroidNotificationDetails(
       persistent ? 'fio_persistent' : 'fio_temporary',
       persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
       channelDescription: persistent
           ? 'Lembretes que aparecem ao salvar e ficam até a exclusão'
           : 'Lembretes que podem ser dispensados normalmente',
+      icon: 'ic_stat_fio',
+      color: const Color(0xFF0072DE),
+      subText: when,
+      ticker: reminder.title,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: reminder.title,
+        summaryText: when,
+      ),
       importance: Importance.max,
       priority: Priority.high,
       ongoing: persistent,
@@ -87,7 +106,7 @@ class LocalNotificationService implements NotificationService {
       await _plugin.show(
         reminder.notificationId,
         reminder.title,
-        reminder.notes.isEmpty ? 'Lembrete permanente' : reminder.notes,
+        body,
         details,
         payload: reminder.id,
       );
@@ -105,7 +124,7 @@ class LocalNotificationService implements NotificationService {
     await _plugin.zonedSchedule(
       reminder.notificationId,
       reminder.title,
-      reminder.notes.isEmpty ? 'Está na hora.' : reminder.notes,
+      body,
       tz.TZDateTime.from(reminder.scheduledAt, tz.local),
       details,
       androidScheduleMode: canScheduleExactAlarms

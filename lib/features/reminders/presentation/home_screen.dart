@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
 import 'reminder_form_screen.dart';
@@ -29,10 +28,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _clock = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => setState(() {}),
-    );
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
   }
 
   @override
@@ -79,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final items = _selectedList == _HomeList.active
             ? widget.controller.active
             : widget.controller.completed;
-
         return Scaffold(
           body: SafeArea(
             bottom: false,
@@ -88,17 +83,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _Header(controller: widget.controller),
                 if (kIsWeb)
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      border: Border(
-                        bottom: BorderSide(color: AppColors.line),
-                      ),
+                    margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Text(
-                      'Nesta versão Web, os lembretes ficam neste navegador. '
-                      'Notificações não são enviadas.',
+                      'Nesta versão Web, os lembretes ficam neste navegador. Notificações não são enviadas.',
                     ),
                   ),
                 _ListSelector(
@@ -111,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: items.isEmpty
                       ? _EmptyState(list: _selectedList)
                       : ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 112),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 112),
                           itemCount: items.length,
                           itemBuilder: (context, index) {
                             final reminder = items[index];
@@ -136,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       : () => _openForm(reminder),
                                   onDelete: () => _confirmDelete(reminder),
                                 ),
+                                const SizedBox(height: 10),
                               ],
                             );
                           },
@@ -144,15 +137,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ],
             ),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _openForm,
-            backgroundColor: AppColors.blue,
-            foregroundColor: AppColors.white,
-            elevation: 0,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.zero,
-            ),
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             label: const Text('Novo lembrete'),
           ),
         );
@@ -164,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: const Text('Excluir lembrete?'),
         content: Text('“${reminder.title}” será removido do aparelho.'),
         actions: [
@@ -190,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 class _Header extends StatelessWidget {
   const _Header({required this.controller});
-
   final ReminderController controller;
 
   @override
@@ -198,122 +184,105 @@ class _Header extends StatelessWidget {
     final overdue = controller.oldestOverdue;
     final next = overdue ?? controller.nextReminder;
     final now = DateTime.now();
-    final day = DateFormat('dd').format(now);
-    final month = DateFormat('MMM', 'pt_BR').format(now).replaceAll('.', '');
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final compact = MediaQuery.sizeOf(context).height < 600;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(day, style: Theme.of(context).textTheme.displayLarge),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        month.toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.blue,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('EEEE', 'pt_BR').format(now),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'FIO',
-                style: TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 3,
-                ),
-              ),
-            ],
+          Text(
+            DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(now),
+            style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 26),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      overdue != null
-                          ? 'Lembrete atrasado'
-                          : next == null
-                              ? 'Tudo em dia'
-                              : 'Próximo lembrete',
-                      style: Theme.of(context).textTheme.bodyMedium,
+          const SizedBox(height: 4),
+          Text('Lembretes', style: theme.textTheme.displayLarge),
+          if (!compact) ...[
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 15, 18, 14),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .11),
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    const SizedBox(height: 3),
+                    child: Icon(
+                      overdue != null
+                          ? Icons.notifications_active_rounded
+                          : Icons.notifications_rounded,
+                      color: accent,
+                      size: 23,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          overdue != null
+                              ? 'Lembrete atrasado'
+                              : next == null
+                                  ? 'Tudo em dia'
+                                  : 'Próximo lembrete',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          next?.title ?? 'Nenhum lembrete futuro',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (next != null) ...[
+                    const SizedBox(width: 8),
                     Text(
-                      next == null ? 'Nenhum lembrete futuro' : next.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      DateFormat(overdue == null ? 'HH:mm' : 'dd/MM')
+                          .format(next.scheduledAt),
+                      style:
+                          theme.textTheme.titleLarge?.copyWith(color: accent),
                     ),
                   ],
+                ],
+              ),
+            ),
+            if (controller.completedToday + controller.remainingToday > 0) ...[
+              const SizedBox(height: 12),
+              Semantics(
+                label: 'Progresso dos lembretes de hoje',
+                value: '${controller.completedToday} concluídos de '
+                    '${controller.completedToday + controller.remainingToday}',
+                child: LinearProgressIndicator(
+                  value: controller.todayProgress,
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              if (next != null) ...[
-                const SizedBox(width: 16),
-                Text(
-                  DateFormat(
-                    overdue == null ? 'HH:mm' : 'dd/MM HH:mm',
-                  ).format(next.scheduledAt),
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: AppColors.blue,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
+              const SizedBox(height: 5),
+              Text(
+                controller.remainingToday == 0
+                    ? 'Nada pendente para hoje'
+                    : controller.remainingToday.toString() +
+                        (controller.remainingToday == 1
+                            ? ' item restante hoje'
+                            : ' itens restantes hoje'),
+                style: theme.textTheme.bodyMedium,
+              ),
             ],
-          ),
-          const SizedBox(height: 18),
-          Semantics(
-            label: 'Progresso dos lembretes de hoje',
-            value: '${controller.completedToday} concluídos de '
-                '${controller.completedToday + controller.remainingToday}',
-            child: LinearProgressIndicator(
-              value: controller.todayProgress,
-              minHeight: 3,
-              backgroundColor: AppColors.line,
-              color: AppColors.blue,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            controller.remainingToday == 0
-                ? 'Nada pendente para hoje'
-                : '${controller.remainingToday} ${controller.remainingToday == 1 ? 'item restante' : 'itens restantes'} hoje',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          ],
         ],
       ),
     );
@@ -327,7 +296,6 @@ class _ListSelector extends StatelessWidget {
     required this.completedCount,
     required this.onChanged,
   });
-
   final _HomeList selected;
   final int activeCount;
   final int completedCount;
@@ -335,21 +303,19 @@ class _ListSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
       child: Row(
         children: [
           Expanded(
             child: _SelectorButton(
-              label: 'Lembretes',
+              label: 'Pendentes',
               count: activeCount,
               selected: selected == _HomeList.active,
               onTap: () => onChanged(_HomeList.active),
             ),
           ),
-          Container(width: 1, height: 52, color: AppColors.line),
+          const SizedBox(width: 8),
           Expanded(
             child: _SelectorButton(
               label: 'Concluídos',
@@ -371,7 +337,6 @@ class _SelectorButton extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
   final String label;
   final int count;
   final bool selected;
@@ -379,46 +344,28 @@ class _SelectorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Semantics(
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: 52,
-          padding: EdgeInsets.symmetric(
-            horizontal: MediaQuery.sizeOf(context).width < 360 ? 12 : 20,
-          ),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: selected ? AppColors.blue : Colors.transparent,
-                width: 3,
+      button: true,
+      child: Material(
+        color: selected ? theme.colorScheme.primary : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            child: Text(
+              '$label $count',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: selected ? Colors.white : theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? AppColors.ink : AppColors.muted,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                count.toString().padLeft(2, '0'),
-                style: TextStyle(
-                  color: selected ? AppColors.blue : AppColors.muted,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -428,7 +375,6 @@ class _SelectorButton extends StatelessWidget {
 
 class _DateDivider extends StatelessWidget {
   const _DateDivider({required this.date});
-
   final DateTime date;
 
   @override
@@ -443,18 +389,11 @@ class _DateDivider extends StatelessWidget {
       -1 => 'Ontem',
       _ => DateFormat("EEEE, dd 'de' MMMM", 'pt_BR').format(date),
     };
-
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 9),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 19, 4, 11),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.muted,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: .3,
-        ),
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
       ),
     );
   }
@@ -462,38 +401,50 @@ class _DateDivider extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.list});
-
   final _HomeList list;
 
   @override
   Widget build(BuildContext context) {
     final completed = list == _HomeList.completed;
+    final theme = Theme.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              completed ? Icons.check_circle_outline : Icons.notifications_none,
-              size: 42,
-              color: AppColors.blue,
-            ),
-            const SizedBox(height: 18),
-            Text(
-              completed ? 'Nenhum item concluído' : 'Nenhum lembrete',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              completed
-                  ? 'Os lembretes marcados como concluídos aparecem aqui.'
-                  : 'Adicione o que você não quer esquecer.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: .1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  completed
+                      ? Icons.task_alt_rounded
+                      : Icons.notifications_none_rounded,
+                  size: 34,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                completed ? 'Nenhum item concluído' : 'Nenhum lembrete',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                completed
+                    ? 'Os lembretes marcados como concluídos aparecem aqui.'
+                    : 'Adicione o que você não quer esquecer.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
         ),
       ),
     );

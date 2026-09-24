@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/theme/app_theme.dart';
 import '../../domain/reminder.dart';
 
 class ReminderListItem extends StatelessWidget {
@@ -21,106 +20,110 @@ class ReminderListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final persistent = reminder.kind == NotificationKind.persistent;
-    return Dismissible(
-      key: ValueKey(reminder.id),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        onDelete();
-        return false;
-      },
-      background: Container(
-        color: AppColors.ink,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
-        alignment: Alignment.centerRight,
-        child: const Icon(Icons.delete_outline, color: AppColors.white),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 88),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 14, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 52,
-                child: Text(
-                  DateFormat('HH:mm').format(reminder.scheduledAt),
-                  style: const TextStyle(
-                    color: AppColors.blue,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()],
+    final accent = theme.colorScheme.primary;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Dismissible(
+        key: ValueKey(reminder.id),
+        direction: DismissDirection.endToStart,
+        confirmDismiss: (_) async {
+          onDelete();
+          return false;
+        },
+        background: Container(
+          color: theme.colorScheme.error,
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          alignment: Alignment.centerRight,
+          child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+        ),
+        child: Material(
+          color: theme.colorScheme.surface,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(15, 13, 8, 13),
+              child: Row(
+                children: [
+                  Container(
+                    width: 57,
+                    height: 57,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .1),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      DateFormat('HH:mm').format(reminder.scheduledAt),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 50,
-                margin: const EdgeInsets.only(right: 14),
-                color: AppColors.line,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      reminder.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          reminder.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge?.copyWith(
                             decoration: reminder.isCompleted
                                 ? TextDecoration.lineThrough
                                 : null,
                             color: reminder.isCompleted
-                                ? AppColors.muted
-                                : AppColors.ink,
+                                ? theme.textTheme.bodyMedium?.color
+                                : null,
                           ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          kIsWeb
-                              ? Icons.notifications_off_outlined
-                              : persistent
-                                  ? Icons.push_pin_outlined
-                                  : Icons.notifications_none,
-                          size: 15,
-                          color: AppColors.muted,
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          kIsWeb
-                              ? 'Sem notificação'
-                              : persistent
-                                  ? 'Permanente'
-                                  : 'Temporária',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        if (reminder.isPast && !reminder.isCompleted) ...[
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Atrasado',
-                            style: TextStyle(
-                              color: AppColors.blue,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            Icon(
+                              kIsWeb
+                                  ? Icons.notifications_off_outlined
+                                  : persistent
+                                      ? Icons.push_pin_outlined
+                                      : Icons.notifications_none_rounded,
+                              size: 14,
+                              color: theme.textTheme.bodyMedium?.color,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                kIsWeb
+                                    ? 'Sem notificação'
+                                    : persistent
+                                        ? 'Permanente'
+                                        : 'Temporária',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium
+                                    ?.copyWith(fontSize: 12),
+                              ),
+                            ),
+                            if (reminder.isPast && !reminder.isCompleted) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                'Atrasado',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+                  ),
                   IconButton(
                     onPressed: onToggle,
                     tooltip: reminder.isCompleted
@@ -128,16 +131,14 @@ class ReminderListItem extends StatelessWidget {
                         : 'Marcar como concluído',
                     icon: Icon(
                       reminder.isCompleted
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: reminder.isCompleted
-                          ? AppColors.blue
-                          : AppColors.muted,
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
+                      color: accent,
                     ),
                   ),
                   PopupMenuButton<String>(
                     tooltip: 'Mais opções para ${reminder.title}',
-                    icon: const Icon(Icons.more_vert),
+                    icon: const Icon(Icons.more_vert_rounded),
                     onSelected: (value) {
                       if (value == 'delete') onDelete();
                     },
@@ -147,7 +148,7 @@ class ReminderListItem extends StatelessWidget {
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

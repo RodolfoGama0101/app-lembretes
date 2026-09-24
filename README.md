@@ -37,4 +37,4 @@ Consulte [docs/system-design.md](docs/system-design.md) para as decisões e o ca
 
 ## Design visual
 
-O frontend usa uma direção Swiss: superfícies brancas/neutras, tipografia sans, grade marcada por linhas de 1 px e azul Yves Klein como único acento. Datas e horários são elementos editoriais grandes; a régua do dia destaca o próximo compromisso sem adicionar ruído visual.
+O frontend segue a linguagem da One UI 9: título amplo, ações ao alcance do polegar, superfícies suaves, cantos arredondados, azul de ação e tema claro/escuro conforme o aparelho. Os alertas Android exibem horário e observações em formato expandido, usando o painel nativo do sistema.

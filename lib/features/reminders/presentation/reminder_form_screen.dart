@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
 
@@ -64,16 +63,12 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           tooltip: 'Fechar',
         ),
         title: Text(_isEditing ? 'Editar lembrete' : 'Novo lembrete'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(),
-        ),
       ),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
             children: [
               const _FieldLabel('O que lembrar?'),
               const SizedBox(height: 8),
@@ -91,7 +86,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                     ? 'Digite um título.'
                     : null,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               const _FieldLabel('Quando fazer?'),
               const SizedBox(height: 8),
               LayoutBuilder(
@@ -128,7 +123,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 const _FieldLabel('Tipo de notificação'),
                 const SizedBox(height: 8),
                 _NotificationOption(
@@ -150,7 +145,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                       setState(() => _kind = NotificationKind.persistent),
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               const _FieldLabel('Observação (opcional)'),
               const SizedBox(height: 8),
               TextFormField(
@@ -277,11 +272,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
-        color: AppColors.ink,
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 15),
     );
   }
 }
@@ -324,48 +315,60 @@ class _NotificationOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
     return Semantics(
       selected: selected,
       inMutuallyExclusiveGroup: true,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.surface : AppColors.white,
-            border: Border.all(
-              color: selected ? AppColors.blue : AppColors.line,
-              width: selected ? 2 : 1,
+      child: Material(
+        color:
+            selected ? accent.withValues(alpha: .1) : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: selected ? accent : Colors.transparent,
+                width: 1.5,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: selected ? AppColors.blue : AppColors.muted),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: selected ? .16 : .08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: accent, size: 22),
                 ),
-              ),
-              Icon(
-                selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                color: selected ? AppColors.blue : AppColors.muted,
-              ),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(fontSize: 16)),
+                      const SizedBox(height: 3),
+                      Text(description, style: theme.textTheme.bodyMedium),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: selected ? accent : theme.textTheme.bodyMedium?.color,
+                ),
+              ],
+            ),
           ),
         ),
       ),
