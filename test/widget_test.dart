@@ -18,7 +18,7 @@ void main() {
     );
     await controller.load();
 
-    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.pumpWidget(LembretesApp(controller: controller));
     expect(find.text('Nenhum lembrete'), findsOneWidget);
 
     await tester.tap(find.text('Novo lembrete'));
@@ -42,7 +42,7 @@ void main() {
     );
     await controller.load();
 
-    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.pumpWidget(LembretesApp(controller: controller));
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
 
@@ -90,7 +90,7 @@ void main() {
     );
     await controller.load();
 
-    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.pumpWidget(LembretesApp(controller: controller));
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('Mais opções para Lembrete para excluir'));
     await tester.pumpAndSettle();
@@ -126,7 +126,7 @@ void main() {
     );
     await controller.load();
 
-    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.pumpWidget(LembretesApp(controller: controller));
     await tester.tap(find.text('Lembrete editável').last);
     await tester.pumpAndSettle();
 
@@ -159,7 +159,7 @@ void main() {
     );
     await controller.load();
 
-    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.pumpWidget(LembretesApp(controller: controller));
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Sem prazo');

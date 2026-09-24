@@ -22,9 +22,9 @@ Future<void> main() async {
     );
     await controller.load();
 
-    runApp(FioApp(controller: controller));
+    runApp(LembretesApp(controller: controller));
   } catch (error) {
-    debugPrint('Falha ao iniciar o Fio: $error');
+    debugPrint('Falha ao iniciar Lembretes: $error');
     runApp(const _StartupErrorApp());
   }
 }
@@ -35,11 +35,11 @@ class _StartupErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fio',
+      title: 'Lembretes',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: Scaffold(
-        appBar: AppBar(title: const Text('Fio')),
+        appBar: AppBar(title: const Text('Lembretes')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -49,7 +49,7 @@ class _StartupErrorApp extends StatelessWidget {
                 const Icon(Icons.error_outline, size: 40),
                 const SizedBox(height: 16),
                 const Text(
-                  'Não foi possível iniciar o Fio. Verifique as configurações '
+                  'Não foi possível iniciar o aplicativo Lembretes. Verifique as configurações '
                   'do aparelho e tente novamente.',
                   textAlign: TextAlign.center,
                 ),
