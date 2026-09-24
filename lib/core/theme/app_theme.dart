@@ -79,21 +79,41 @@ abstract final class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
+      dividerColor: border,
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
+        hintStyle: TextStyle(color: muted),
+        helperStyle: TextStyle(color: muted),
+        counterStyle: TextStyle(color: muted, fontSize: 12),
+        errorStyle: TextStyle(color: scheme.error, fontSize: 12),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: border),
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide.none),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: border),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: border),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: BorderSide(color: accent, width: 2)),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: accent, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: scheme.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: scheme.error, width: 2),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -111,6 +131,29 @@ abstract final class AppTheme {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 6,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: surface,
+        headerBackgroundColor: accent,
+        headerForegroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: accent,

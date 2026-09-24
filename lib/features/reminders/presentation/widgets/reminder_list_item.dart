@@ -36,7 +36,16 @@ class ReminderListItem extends StatelessWidget {
           color: theme.colorScheme.error,
           padding: const EdgeInsets.symmetric(horizontal: 22),
           alignment: Alignment.centerRight,
-          child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_outline_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Excluir',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700)),
+            ],
+          ),
         ),
         child: Material(
           color: theme.colorScheme.surface,
@@ -142,8 +151,24 @@ class ReminderListItem extends StatelessWidget {
                     onSelected: (value) {
                       if (value == 'delete') onDelete();
                     },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'delete', child: Text('Excluir')),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded,
+                                color: Theme.of(context).colorScheme.error,
+                                size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Excluir',
+                              style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ],

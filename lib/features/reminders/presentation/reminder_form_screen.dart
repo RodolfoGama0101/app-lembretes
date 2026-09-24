@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
+import 'widgets/delete_reminder_dialog.dart';
 
 class ReminderFormScreen extends StatefulWidget {
   const ReminderFormScreen({
@@ -63,6 +64,20 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           tooltip: 'Fechar',
         ),
         title: Text(_isEditing ? 'Editar lembrete' : 'Novo lembrete'),
+        actions: [
+          if (_isEditing)
+            IconButton.filledTonal(
+              onPressed: _saving ? null : _delete,
+              tooltip: 'Excluir lembrete',
+              style: IconButton.styleFrom(
+                backgroundColor:
+                    Theme.of(context).colorScheme.error.withValues(alpha: .12),
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Form(
@@ -78,9 +93,10 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 textCapitalization: TextCapitalization.sentences,
                 textInputAction: TextInputAction.next,
                 maxLength: 80,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                style: Theme.of(context).textTheme.bodyLarge,
                 decoration: const InputDecoration(
                   hintText: 'Ex.: Tomar o remédio',
-                  counterText: '',
                 ),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? 'Digite um título.'
@@ -93,12 +109,14 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 builder: (context, constraints) {
                   final date = _PickerButton(
                     icon: Icons.calendar_today_outlined,
-                    label: DateFormat('dd/MM/yyyy').format(_scheduledAt),
+                    caption: 'Data',
+                    value: DateFormat('dd/MM/yyyy').format(_scheduledAt),
                     onPressed: _pickDate,
                   );
                   final time = _PickerButton(
-                    icon: Icons.schedule,
-                    label: DateFormat('HH:mm').format(_scheduledAt),
+                    icon: Icons.schedule_rounded,
+                    caption: 'Hora',
+                    value: DateFormat('HH:mm').format(_scheduledAt),
                     onPressed: _pickTime,
                   );
                   if (constraints.maxWidth < 360) {
@@ -154,16 +172,24 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 minLines: 3,
                 maxLines: 5,
                 maxLength: 240,
+                style: Theme.of(context).textTheme.bodyLarge,
                 decoration: const InputDecoration(
                   hintText: 'Adicione algum detalhe útil',
                 ),
               ),
               const SizedBox(height: 28),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: Text(_saving ? 'Salvando…' : 'Salvar lembrete'),
-              ),
             ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          child: FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: const Icon(Icons.check_rounded),
+            label: Text(_saving ? 'Salvando…' : 'Salvar lembrete'),
           ),
         ),
       ),
@@ -171,6 +197,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
     final value = await showDatePicker(
       context: context,
       initialDate:
@@ -191,6 +218,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   }
 
   Future<void> _pickTime() async {
+    FocusScope.of(context).unfocus();
     final value = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_scheduledAt),
@@ -205,6 +233,24 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
         value.minute,
       );
     });
+  }
+
+  Future<void> _delete() async {
+    final reminder = widget.reminder;
+    if (reminder == null || _saving) return;
+    if (!await showDeleteReminderDialog(context, reminder) || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      await widget.controller.remove(reminder);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível excluir o lembrete.')),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -280,20 +326,68 @@ class _FieldLabel extends StatelessWidget {
 class _PickerButton extends StatelessWidget {
   const _PickerButton({
     required this.icon,
-    required this.label,
+    required this.caption,
+    required this.value,
     required this.onPressed,
   });
 
   final IconData icon;
-  final String label;
+  final String caption;
+  final String value;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    return Semantics(
+      button: true,
+      label: 'Selecionar $caption: $value',
+      child: Material(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onPressed,
+          excludeFromSemantics: true,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.dividerColor),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 21, color: accent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(caption,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            theme.textTheme.titleLarge?.copyWith(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20, color: theme.textTheme.bodyMedium?.color),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -323,16 +417,16 @@ class _NotificationOption extends StatelessWidget {
       child: Material(
         color:
             selected ? accent.withValues(alpha: .1) : theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: selected ? accent : Colors.transparent,
+                color: selected ? accent : theme.dividerColor,
                 width: 1.5,
               ),
             ),

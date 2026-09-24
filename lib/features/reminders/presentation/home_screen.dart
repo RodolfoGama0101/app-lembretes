@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
 import 'reminder_form_screen.dart';
+import 'widgets/delete_reminder_dialog.dart';
 import 'widgets/reminder_list_item.dart';
 
 enum _HomeList { active, completed }
@@ -149,24 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _confirmDelete(Reminder reminder) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir lembrete?'),
-        content: Text('“${reminder.title}” será removido do aparelho.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
+    if (await showDeleteReminderDialog(context, reminder)) {
       await _runAction(() => widget.controller.remove(reminder));
     }
   }

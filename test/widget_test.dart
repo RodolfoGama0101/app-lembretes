@@ -91,6 +91,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.items, isEmpty);
   });
+
+  testWidgets('exclusão na edição exige confirmação', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'edit-delete',
+          notificationId: 9,
+          title: 'Lembrete editável',
+          scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+          kind: NotificationKind.temporary,
+          createdAt: DateTime.now(),
+        ),
+      ];
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+
+    await tester.pumpWidget(FioApp(controller: controller));
+    await tester.tap(find.text('Lembrete editável').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Excluir lembrete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(repository.items, hasLength(1));
+
+    await tester.tap(find.byTooltip('Excluir lembrete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir'));
+    await tester.pumpAndSettle();
+    expect(repository.items, isEmpty);
+    expect(find.text('Nenhum lembrete'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _MemoryRepository implements ReminderRepository {
