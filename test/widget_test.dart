@@ -65,6 +65,50 @@ void main() {
         findsNothing);
   });
 
+  testWidgets('mostra horário aproximado após salvar', (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final notifications = _FakeNotificationService()
+      ..scheduleStatus = NotificationDeliveryStatus.approximate;
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Consulta');
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Horário aproximado'), findsOneWidget);
+    expect(find.textContaining('Permita alarmes exatos'), findsOneWidget);
+  });
+
+  testWidgets('erro de agendamento informa que o item não foi salvo',
+      (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService()..failSchedule = true;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Consulta');
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items, isEmpty);
+    expect(find.textContaining('Não foi possível agendar o aviso'),
+        findsOneWidget);
+  });
+
   testWidgets('formulário compacto mantém a data legível e a opção selecionada',
       (
     tester,
@@ -342,6 +386,9 @@ class _MemoryRepository implements ReminderRepository {
 
 class _FakeNotificationService implements NotificationService {
   bool failInitialize = false;
+  bool failSchedule = false;
+  NotificationDeliveryStatus scheduleStatus =
+      NotificationDeliveryStatus.scheduled;
 
   @override
   Future<void> cancel(int notificationId) async {}
@@ -352,13 +399,20 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> reconcile(List<Reminder> reminders) async {}
+  Future<Map<String, NotificationDeliveryStatus>> reconcile(
+          List<Reminder> reminders) async =>
+      {
+        for (final reminder in reminders) reminder.id: scheduleStatus,
+      };
 
   @override
   Future<bool> requestPermission(NotificationKind kind) async => true;
 
   @override
-  Future<void> schedule(Reminder reminder) async {}
+  Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
+    if (failSchedule) throw StateError('Agendamento falhou');
+    return scheduleStatus;
+  }
 
   @override
   Future<void> restorePersistent(Reminder reminder) async {}

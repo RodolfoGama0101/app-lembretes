@@ -58,7 +58,7 @@ class LocalNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> schedule(Reminder reminder) async {
+  Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
     final persistent = reminder.isPersistent;
     final when = reminder.isUnscheduled
         ? 'Sem horário'
@@ -135,7 +135,7 @@ class LocalNotificationService implements NotificationService {
           rethrow;
         }
       }
-      return;
+      return NotificationDeliveryStatus.scheduled;
     }
 
     final canScheduleExactAlarms = Platform.isAndroid
@@ -157,6 +157,9 @@ class LocalNotificationService implements NotificationService {
           : AndroidScheduleMode.inexactAllowWhileIdle,
       payload: reminder.id,
     );
+    return !Platform.isAndroid || canScheduleExactAlarms
+        ? NotificationDeliveryStatus.scheduled
+        : NotificationDeliveryStatus.approximate;
   }
 
   String _bodyFor(Reminder reminder) => reminder.notes.isNotEmpty
@@ -167,8 +170,25 @@ class LocalNotificationService implements NotificationService {
               ? 'Lembrete fixado no painel'
               : 'Está na hora deste lembrete.';
 
+  Future<bool> _notificationsAllowed() async {
+    if (Platform.isAndroid) {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      return await android?.areNotificationsEnabled() ?? false;
+    }
+    if (Platform.isIOS) {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      return (await ios?.checkPermissions())?.isEnabled ?? false;
+    }
+    return false;
+  }
+
   @override
-  Future<void> reconcile(List<Reminder> reminders) async {
+  Future<Map<String, NotificationDeliveryStatus>> reconcile(
+      List<Reminder> reminders) async {
+    final statuses = <String, NotificationDeliveryStatus>{};
+    final notificationsAllowed = await _notificationsAllowed();
     final active = Platform.isAndroid || Platform.isIOS
         ? await _plugin.getActiveNotifications()
         : <ActiveNotification>[];
@@ -194,22 +214,32 @@ class LocalNotificationService implements NotificationService {
     for (final reminder in reminders) {
       if (reminder.isPersistent &&
           (!reminder.isCompleted || reminder.keepNotificationAfterCompletion)) {
+        if (!notificationsAllowed) {
+          statuses[reminder.id] = NotificationDeliveryStatus.permissionDenied;
+          continue;
+        }
         final stale = active.any((item) =>
             item.id == reminder.notificationId &&
             ((item.title != null && item.title != reminder.title) ||
                 (item.body != null && item.body != _bodyFor(reminder))));
         if (stale) await _plugin.cancel(reminder.notificationId);
         await restorePersistent(reminder);
+        statuses[reminder.id] = NotificationDeliveryStatus.scheduled;
       } else if (reminder.kind == NotificationKind.temporary &&
           !reminder.isCompleted) {
+        if (!notificationsAllowed) {
+          statuses[reminder.id] = NotificationDeliveryStatus.permissionDenied;
+          continue;
+        }
         if (reminder.scheduledAt!.isAfter(now)) {
           await _plugin.cancel(reminder.notificationId);
-          await schedule(reminder);
+          statuses[reminder.id] = await schedule(reminder);
         } else if (pending.any((item) => item.id == reminder.notificationId)) {
           await _plugin.cancel(reminder.notificationId);
         }
       }
     }
+    return statuses;
   }
 
   @override

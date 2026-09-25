@@ -94,7 +94,7 @@ void main() {
         scheduledAt: DateTime.now().add(const Duration(hours: 1)),
         kind: NotificationKind.temporary,
       ),
-      throwsStateError,
+      throwsA(isA<NotificationSchedulingFailure>()),
     );
 
     expect(controller.active, isEmpty);
@@ -117,9 +117,33 @@ void main() {
       kind: NotificationKind.temporary,
     );
 
-    expect(permitted, isFalse);
+    expect(permitted, NotificationDeliveryStatus.permissionDenied);
     expect(repository.items, hasLength(1));
     expect(notifications.scheduled, isEmpty);
+  });
+
+  test('informa agendamento aproximado e atualiza o diagnóstico', () async {
+    final notifications = _FakeNotificationService()
+      ..scheduleStatus = NotificationDeliveryStatus.approximate;
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+
+    final status = await controller.add(
+      title: 'Consulta',
+      notes: '',
+      scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+      kind: NotificationKind.temporary,
+    );
+    expect(status, NotificationDeliveryStatus.approximate);
+    expect(controller.statusFor(controller.active.single),
+        NotificationDeliveryStatus.approximate);
+
+    notifications.scheduleStatus = NotificationDeliveryStatus.permissionDenied;
+    await controller.refreshNotificationStatuses();
+    expect(controller.statusFor(controller.active.single),
+        NotificationDeliveryStatus.permissionDenied);
   });
 
   test('falha na edição conserva o lembrete anterior', () async {
@@ -140,7 +164,7 @@ void main() {
 
     await expectLater(
       controller.update(original.copyWith(title: 'Título novo')),
-      throwsStateError,
+      throwsA(isA<NotificationSchedulingFailure>()),
     );
 
     expect(controller.active.single.title, 'Título original');
@@ -296,7 +320,7 @@ void main() {
     expect(controller.notificationFailure, NotificationFailure.initialization);
 
     final updated = controller.active.single.copyWith(title: 'Título alterado');
-    expect(await controller.update(updated), isFalse);
+    expect(await controller.update(updated), NotificationDeliveryStatus.unavailable);
     expect(repository.items.single.title, 'Título alterado');
     expect(notifications.scheduled, isEmpty);
 
@@ -473,6 +497,8 @@ class _FakeNotificationService implements NotificationService {
   bool failNextSchedule = false;
   bool failInitialize = false;
   bool failReconcile = false;
+  NotificationDeliveryStatus scheduleStatus =
+      NotificationDeliveryStatus.scheduled;
   final List<Reminder> reconciled = [];
 
   @override
@@ -486,11 +512,15 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> reconcile(List<Reminder> reminders) async {
+  Future<Map<String, NotificationDeliveryStatus>> reconcile(
+      List<Reminder> reminders) async {
     if (failReconcile) throw StateError('Restauração indisponível');
     reconciled
       ..clear()
       ..addAll(reminders);
+    return {
+      for (final reminder in reminders) reminder.id: scheduleStatus,
+    };
   }
 
   @override
@@ -503,11 +533,12 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> schedule(Reminder reminder) async {
+  Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
     if (failNextSchedule) {
       failNextSchedule = false;
       throw StateError('Agendamento falhou');
     }
     scheduled.add(reminder);
+    return scheduleStatus;
   }
 }

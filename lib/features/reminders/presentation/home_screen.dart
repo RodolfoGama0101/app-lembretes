@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       if (widget.controller.notificationsAvailable) {
-        unawaited(widget.controller.restorePersistentNotifications());
+        unawaited(widget.controller.refreshNotificationStatuses());
       } else {
         unawaited(widget.controller.retryNotifications());
       }
@@ -162,6 +162,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   _DateDivider(date: reminder.scheduledAt),
                                 ReminderListItem(
                                   reminder: reminder,
+                                  notificationStatus:
+                                      widget.controller.statusFor(reminder),
                                   onToggle: () => _runAction(
                                     () => widget.controller
                                         .toggleCompleted(reminder),

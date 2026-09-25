@@ -52,6 +52,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-03 — Transparência de permissão e precisão
 
+**Estado:** concluída em 25/09/2026 no fluxo Dart; confirmação em Android/iOS integra BL-04.
+
 **Problema:** a pessoa vê “salvo” sem saber se o aviso está desativado ou se, no Android, o horário é aproximado.
 
 **Critérios de aceite:**

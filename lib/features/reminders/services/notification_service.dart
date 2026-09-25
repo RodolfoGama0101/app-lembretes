@@ -1,10 +1,19 @@
 import '../domain/reminder.dart';
 
+enum NotificationDeliveryStatus {
+  scheduled,
+  approximate,
+  permissionDenied,
+  unavailable,
+  inactive,
+}
+
 abstract interface class NotificationService {
   Future<void> initialize();
   Future<bool> requestPermission(NotificationKind kind);
-  Future<void> schedule(Reminder reminder);
+  Future<NotificationDeliveryStatus> schedule(Reminder reminder);
   Future<void> restorePersistent(Reminder reminder);
-  Future<void> reconcile(List<Reminder> reminders);
+  Future<Map<String, NotificationDeliveryStatus>> reconcile(
+      List<Reminder> reminders);
   Future<void> cancel(int notificationId);
 }

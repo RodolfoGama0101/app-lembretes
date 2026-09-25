@@ -38,6 +38,8 @@ No celular, permita notificações quando o sistema solicitar. Se a permissão f
 
 Se o serviço de notificações não iniciar ou não puder restaurar os avisos, os lembretes continuam acessíveis e podem ser editados. A tela inicial informa o problema e oferece **Tentar novamente**. Alterações feitas enquanto os avisos estão indisponíveis são reconciliadas com o painel quando o serviço volta.
 
+A lista mostra se o aviso foi configurado, se seu horário é aproximado ou se a permissão está desativada. O diagnóstico é atualizado ao abrir ou retomar o aplicativo. No Android, um agendamento aproximado pode chegar depois da hora escolhida; o estado mostrado descreve a programação feita pelo app, não garante a entrega pelo sistema.
+
 ### Assinatura Android para publicação
 
 O APK de publicação usa a chave local em `android/lembretes-release.jks` e as senhas em `android/key.properties`. Ambos os arquivos são ignorados pelo Git. **Guarde uma cópia segura dos dois arquivos**: sem a mesma chave, não é possível distribuir uma atualização instalável sobre esta versão.

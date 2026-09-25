@@ -9,6 +9,11 @@ import '../services/notification_service.dart';
 
 enum NotificationFailure { initialization, restoration }
 
+class NotificationSchedulingFailure implements Exception {
+  const NotificationSchedulingFailure(this.cause);
+  final Object cause;
+}
+
 class ReminderController extends ChangeNotifier {
   ReminderController({
     required ReminderRepository repository,
@@ -21,12 +26,29 @@ class ReminderController extends ChangeNotifier {
   final ReminderRepository _repository;
   final NotificationService _notificationService;
   final List<Reminder> _reminders = [];
+  final Map<String, NotificationDeliveryStatus> _deliveryStatuses = {};
   bool _notificationsAvailable;
   NotificationFailure? _notificationFailure;
   Future<bool>? _retryInProgress;
 
   bool get notificationsAvailable => _notificationsAvailable;
   NotificationFailure? get notificationFailure => _notificationFailure;
+  NotificationDeliveryStatus? statusFor(Reminder reminder) {
+    if (reminder.isCompleted && !reminder.keepNotificationAfterCompletion) {
+      return NotificationDeliveryStatus.inactive;
+    }
+    return _notificationsAvailable
+        ? _deliveryStatuses[reminder.id]
+        : NotificationDeliveryStatus.unavailable;
+  }
+
+  Future<NotificationDeliveryStatus> _schedule(Reminder reminder) async {
+    try {
+      return await _notificationService.schedule(reminder);
+    } catch (error) {
+      throw NotificationSchedulingFailure(error);
+    }
+  }
 
   Future<bool> retryNotifications() => _retryInProgress ??=
       _retryNotifications().whenComplete(() => _retryInProgress = null);
@@ -36,7 +58,10 @@ class ReminderController extends ChangeNotifier {
     try {
       await _notificationService.initialize();
       initialized = true;
-      await _notificationService.reconcile(_reminders);
+      final statuses = await _notificationService.reconcile(_reminders);
+      _deliveryStatuses
+        ..clear()
+        ..addAll(statuses);
       _notificationsAvailable = true;
       _notificationFailure = null;
       notifyListeners();
@@ -49,6 +74,22 @@ class ReminderController extends ChangeNotifier {
           : NotificationFailure.initialization;
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> refreshNotificationStatuses() async {
+    if (!_notificationsAvailable) return;
+    try {
+      final statuses = await _notificationService.reconcile(_reminders);
+      _deliveryStatuses
+        ..clear()
+        ..addAll(statuses);
+      notifyListeners();
+    } catch (error) {
+      debugPrint('Falha ao atualizar o estado dos avisos: $error');
+      _notificationsAvailable = false;
+      _notificationFailure = NotificationFailure.restoration;
+      notifyListeners();
     }
   }
 
@@ -84,6 +125,7 @@ class ReminderController extends ChangeNotifier {
     _reminders
       ..clear()
       ..addAll(await _repository.load());
+    _deliveryStatuses.clear();
     if (_notificationsAvailable) await restorePersistentNotifications();
     notifyListeners();
   }
@@ -117,7 +159,7 @@ class ReminderController extends ChangeNotifier {
     return null;
   }
 
-  Future<bool> add({
+  Future<NotificationDeliveryStatus> add({
     required String title,
     required String notes,
     required DateTime? scheduledAt,
@@ -154,7 +196,11 @@ class ReminderController extends ChangeNotifier {
 
     final permitted = _notificationsAvailable &&
         await _notificationService.requestPermission(kind);
-    if (permitted) await _notificationService.schedule(reminder);
+    final status = !_notificationsAvailable
+        ? NotificationDeliveryStatus.unavailable
+        : permitted
+            ? await _schedule(reminder)
+            : NotificationDeliveryStatus.permissionDenied;
     try {
       await _repository.save([..._reminders, reminder]);
     } catch (_) {
@@ -168,30 +214,35 @@ class ReminderController extends ChangeNotifier {
       rethrow;
     }
     _reminders.add(reminder);
+    _deliveryStatuses[reminder.id] = status;
     notifyListeners();
-    return permitted;
+    return status;
   }
 
-  Future<bool> update(Reminder updated) async {
+  Future<NotificationDeliveryStatus> update(Reminder updated) async {
     if ((updated.kind == NotificationKind.unscheduled) !=
         (updated.scheduledAt == null)) {
       throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
     }
     final index = _reminders.indexWhere((item) => item.id == updated.id);
-    if (index < 0) return true;
+    if (index < 0) return NotificationDeliveryStatus.inactive;
 
     if (!_notificationsAvailable) {
       final next = [..._reminders]..[index] = updated;
       await _repository.save(next);
       _reminders[index] = updated;
+      _deliveryStatuses[updated.id] = NotificationDeliveryStatus.unavailable;
       notifyListeners();
-      return false;
+      return NotificationDeliveryStatus.unavailable;
     }
 
     final previous = _reminders[index];
     final replaceVisiblePersistent =
         _shouldShowPersistent(previous) && _shouldShowPersistent(updated);
+    final previousStatus = _deliveryStatuses[previous.id];
     final notificationUnchanged = replaceVisiblePersistent &&
+        previousStatus != NotificationDeliveryStatus.permissionDenied &&
+        previousStatus != NotificationDeliveryStatus.unavailable &&
         previous.kind == updated.kind &&
         previous.scheduledAt == updated.scheduledAt &&
         previous.title == updated.title &&
@@ -209,9 +260,16 @@ class ReminderController extends ChangeNotifier {
     if (!notificationUnchanged && !replaceVisiblePersistent) {
       await _notificationService.cancel(previous.notificationId);
     }
+    var status = NotificationDeliveryStatus.inactive;
     try {
-      if (!notificationUnchanged && shouldSchedule && permitted) {
-        await _notificationService.schedule(updated);
+      if (!shouldSchedule) {
+        status = NotificationDeliveryStatus.inactive;
+      } else if (!permitted) {
+        status = NotificationDeliveryStatus.permissionDenied;
+      } else if (notificationUnchanged) {
+        status = previousStatus ?? NotificationDeliveryStatus.scheduled;
+      } else {
+        status = await _schedule(updated);
       }
       final next = [..._reminders]..[index] = updated;
       await _repository.save(next);
@@ -234,8 +292,9 @@ class ReminderController extends ChangeNotifier {
       rethrow;
     }
     _reminders[index] = updated;
+    _deliveryStatuses[updated.id] = status;
     notifyListeners();
-    return permitted;
+    return status;
   }
 
   Future<void> toggleCompleted(Reminder reminder) async {
@@ -270,6 +329,7 @@ class ReminderController extends ChangeNotifier {
       rethrow;
     }
     _reminders.removeWhere((item) => item.id == reminder.id);
+    _deliveryStatuses.remove(reminder.id);
     notifyListeners();
   }
 

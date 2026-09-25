@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../domain/notification_appearance.dart';
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
+import '../services/notification_service.dart';
 import 'widgets/delete_reminder_dialog.dart';
 import 'widgets/notification_appearance_selector.dart';
 
@@ -327,10 +328,10 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     }
 
     setState(() => _saving = true);
-    bool permissionGranted;
+    NotificationDeliveryStatus deliveryStatus;
     try {
       if (_isEditing) {
-        permissionGranted = await widget.controller.update(
+        deliveryStatus = await widget.controller.update(
           widget.reminder!.copyWith(
             title: _titleController.text.trim(),
             notes: _notesController.text.trim(),
@@ -345,7 +346,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           ),
         );
       } else {
-        permissionGranted = await widget.controller.add(
+        deliveryStatus = await widget.controller.add(
           title: _titleController.text,
           notes: _notesController.text,
           scheduledAt:
@@ -356,12 +357,14 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           symbol: _symbol,
         );
       }
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar. Tente novamente.'),
+        SnackBar(
+          content: Text(error is NotificationSchedulingFailure
+              ? 'Não foi possível agendar o aviso. O lembrete não foi salvo.'
+              : 'Não foi possível salvar. Tente novamente.'),
         ),
       );
       return;
@@ -369,18 +372,21 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    if (!permissionGranted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            kIsWeb
-                ? 'Lembrete salvo neste navegador, sem notificação.'
-                : !widget.controller.notificationsAvailable
-                    ? 'Lembrete salvo. Avisos indisponíveis; tente novamente na lista.'
-                    : 'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
-          ),
-        ),
-      );
+    final message = kIsWeb
+        ? 'Lembrete salvo neste navegador, sem notificação.'
+        : switch (deliveryStatus) {
+            NotificationDeliveryStatus.approximate =>
+              'Lembrete salvo com horário aproximado. Permita alarmes exatos nas configurações para maior precisão.',
+            NotificationDeliveryStatus.permissionDenied =>
+              'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
+            NotificationDeliveryStatus.unavailable =>
+              'Lembrete salvo. Avisos indisponíveis; tente novamente na lista.',
+            NotificationDeliveryStatus.scheduled ||
+            NotificationDeliveryStatus.inactive =>
+              null,
+          };
+    if (message != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }

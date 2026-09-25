@@ -10,13 +10,19 @@ class LocalNotificationService implements NotificationService {
   Future<bool> requestPermission(NotificationKind kind) async => false;
 
   @override
-  Future<void> schedule(Reminder reminder) async {}
+  Future<NotificationDeliveryStatus> schedule(Reminder reminder) async =>
+      NotificationDeliveryStatus.unavailable;
 
   @override
   Future<void> restorePersistent(Reminder reminder) async {}
 
   @override
-  Future<void> reconcile(List<Reminder> reminders) async {}
+  Future<Map<String, NotificationDeliveryStatus>> reconcile(
+          List<Reminder> reminders) async =>
+      {
+        for (final reminder in reminders)
+          reminder.id: NotificationDeliveryStatus.unavailable,
+      };
 
   @override
   Future<void> cancel(int notificationId) async {}
