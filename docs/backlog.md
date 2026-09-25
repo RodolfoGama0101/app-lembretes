@@ -40,6 +40,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-02 — Abrir os dados mesmo com falha nas notificações
 
+**Estado:** concluída em 25/09/2026; entrega nativa real ainda integra a matriz BL-04.
+
 **Problema:** erro de fuso ou inicialização nativa impede a abertura da lista.
 
 **Critérios de aceite:**

@@ -28,6 +28,43 @@ void main() {
     expect(find.text('Tipo de notificação'), findsOneWidget);
   });
 
+  testWidgets('mostra dados e permite tentar alertas novamente',
+      (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'saved',
+          notificationId: 22,
+          title: 'Dado salvo',
+          scheduledAt: DateTime.now().add(const Duration(days: 1)),
+          kind: NotificationKind.temporary,
+          createdAt: DateTime.now(),
+        ),
+      ];
+    final notifications = _FakeNotificationService()..failInitialize = true;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+      notificationsAvailable: false,
+    );
+    await controller.load();
+    await controller.retryNotifications();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    expect(find.text('Dado salvo'), findsWidgets);
+    expect(find.textContaining('Não foi possível iniciar os avisos'),
+        findsOneWidget);
+
+    notifications.failInitialize = false;
+    await tester.tap(find.text('Tentar novamente'));
+    await tester.pumpAndSettle();
+
+    expect(controller.notificationsAvailable, isTrue);
+    expect(find.textContaining('Não foi possível iniciar os avisos'),
+        findsNothing);
+  });
+
   testWidgets('formulário compacto mantém a data legível e a opção selecionada',
       (
     tester,
@@ -304,11 +341,18 @@ class _MemoryRepository implements ReminderRepository {
 }
 
 class _FakeNotificationService implements NotificationService {
+  bool failInitialize = false;
+
   @override
   Future<void> cancel(int notificationId) async {}
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    if (failInitialize) throw StateError('Serviço indisponível');
+  }
+
+  @override
+  Future<void> reconcile(List<Reminder> reminders) async {}
 
   @override
   Future<bool> requestPermission(NotificationKind kind) async => true;

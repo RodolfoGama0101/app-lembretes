@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   _HomeList _selectedList = _HomeList.active;
   late final Timer _clock;
+  bool _retryingNotifications = false;
 
   @override
   void initState() {
@@ -42,8 +43,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(widget.controller.restorePersistentNotifications());
+      if (widget.controller.notificationsAvailable) {
+        unawaited(widget.controller.restorePersistentNotifications());
+      } else {
+        unawaited(widget.controller.retryNotifications());
+      }
     }
+  }
+
+  Future<void> _retryNotifications() async {
+    if (_retryingNotifications) return;
+    setState(() => _retryingNotifications = true);
+    await widget.controller.retryNotifications();
+    if (mounted) setState(() => _retryingNotifications = false);
   }
 
   Future<void> _runAction(Future<void> Function() action) async {
@@ -82,6 +94,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Column(
               children: [
                 _Header(controller: widget.controller),
+                if (!kIsWeb && !widget.controller.notificationsAvailable)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Material(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.controller.notificationFailure ==
+                                      NotificationFailure.restoration
+                                  ? 'Não foi possível restaurar os avisos. Seus lembretes continuam salvos.'
+                                  : 'Não foi possível iniciar os avisos. Seus lembretes continuam salvos.',
+                            ),
+                            TextButton(
+                              onPressed: _retryingNotifications
+                                  ? null
+                                  : _retryNotifications,
+                              child: Text(_retryingNotifications
+                                  ? 'Tentando…'
+                                  : 'Tentar novamente'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 if (kIsWeb)
                   Container(
                     margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),

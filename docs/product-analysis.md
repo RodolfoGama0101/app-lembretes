@@ -1,6 +1,6 @@
 # Análise de produto e experiência — Lembretes
 
-Atualizada em 25/09/2026. Esta revisão fundamenta o [backlog](backlog.md). Combina leitura do código, documentação e capturas existentes com pesquisa secundária. As necessidades são hipóteses de produto: ainda não houve entrevistas nem testes com usuários deste app.
+Atualizada em 25/09/2026. Esta revisão fundamenta o [backlog](backlog.md). Combina leitura do código, documentação e capturas existentes com pesquisa secundária. As necessidades são hipóteses de produto: ainda não houve entrevistas nem testes com usuários deste app. Os achados registram o estado anterior à implementação; acompanhe as conclusões no [backlog](backlog.md).
 
 ## Propósito e base atual
 

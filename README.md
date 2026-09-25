@@ -36,6 +36,8 @@ Se houver mais de um dispositivo disponível, escolha um com `flutter run -d <id
 
 No celular, permita notificações quando o sistema solicitar. Se a permissão for negada, o lembrete ainda será salvo, mas não enviará o aviso. Para notificações temporárias no Android, o aplicativo também solicita acesso a alarmes exatos; sem esse acesso, usa agendamento aproximado. As notificações permanentes aparecem ao salvar e não dependem de alarmes exatos.
 
+Se o serviço de notificações não iniciar ou não puder restaurar os avisos, os lembretes continuam acessíveis e podem ser editados. A tela inicial informa o problema e oferece **Tentar novamente**. Alterações feitas enquanto os avisos estão indisponíveis são reconciliadas com o painel quando o serviço volta.
+
 ### Assinatura Android para publicação
 
 O APK de publicação usa a chave local em `android/lembretes-release.jks` e as senhas em `android/key.properties`. Ambos os arquivos são ignorados pelo Git. **Guarde uma cópia segura dos dois arquivos**: sem a mesma chave, não é possível distribuir uma atualização instalável sobre esta versão.

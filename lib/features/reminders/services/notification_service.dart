@@ -5,5 +5,6 @@ abstract interface class NotificationService {
   Future<bool> requestPermission(NotificationKind kind);
   Future<void> schedule(Reminder reminder);
   Future<void> restorePersistent(Reminder reminder);
+  Future<void> reconcile(List<Reminder> reminders);
   Future<void> cancel(int notificationId);
 }

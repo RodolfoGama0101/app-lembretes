@@ -14,13 +14,13 @@ Future<void> main() async {
     await initializeDateFormatting('pt_BR');
 
     final notificationService = LocalNotificationService();
-    await notificationService.initialize();
-
     final controller = ReminderController(
       repository: LocalReminderRepository(),
       notificationService: notificationService,
+      notificationsAvailable: false,
     );
     await controller.load();
+    await controller.retryNotifications();
 
     runApp(LembretesApp(controller: controller));
   } catch (error) {

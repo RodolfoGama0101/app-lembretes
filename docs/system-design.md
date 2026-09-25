@@ -37,10 +37,12 @@ A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são p
 
 `LocalNotificationService` encapsula o plugin de notificações, fuso horário, permissões e canais Android. No Android, ele combina o símbolo e a cor em um ícone grande gerado para o painel e usa a cor também como destaque do sistema. A notificação permanente usa `ongoing: true` e aparece imediatamente. No Android, o mesmo identificador é reapresentado a cada 24 horas por um alarme aproximado restaurado após o reinício; a temporária é agendada e permite dispensa normal.
 
+O carregamento dos dados não depende da inicialização do serviço nativo. Se ela falhar, o controlador continua permitindo mudanças locais, sinaliza a falha na tela inicial e oferece nova tentativa. Quando o serviço volta, reconcilia notificações ativas e pendentes com a lista persistida: cancela as órfãs e reagenda as temporárias futuras.
+
 ## Fluxo principal
 
 1. O usuário informa título, data, hora e tipo.
-2. O controlador cria um identificador local, publica ou agenda a notificação e persiste o lembrete.
+2. O controlador cria um identificador local, publica ou agenda a notificação quando o serviço está disponível e persiste o lembrete. Se o serviço falhar, preserva a alteração local e tenta reconciliá-la depois.
 3. O tipo permanente aparece imediatamente; o temporário é agendado no fuso horário do aparelho.
 4. Concluir cancela o alerta temporário, mas preserva o permanente. Excluir cancela qualquer notificação do lembrete.
 

@@ -63,13 +63,7 @@ class LocalNotificationService implements NotificationService {
     final when = reminder.isUnscheduled
         ? 'Sem horário'
         : DateFormat('dd/MM • HH:mm', 'pt_BR').format(reminder.scheduledAt!);
-    final body = reminder.notes.isNotEmpty
-        ? reminder.notes
-        : reminder.isUnscheduled
-            ? 'Lembrete sem horário, fixado no painel'
-            : persistent
-                ? 'Lembrete fixado no painel'
-                : 'Está na hora deste lembrete.';
+    final body = _bodyFor(reminder);
     final androidDetails = AndroidNotificationDetails(
       persistent ? 'lembretes_persistent' : 'lembretes_temporary',
       persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
@@ -163,6 +157,59 @@ class LocalNotificationService implements NotificationService {
           : AndroidScheduleMode.inexactAllowWhileIdle,
       payload: reminder.id,
     );
+  }
+
+  String _bodyFor(Reminder reminder) => reminder.notes.isNotEmpty
+      ? reminder.notes
+      : reminder.isUnscheduled
+          ? 'Lembrete sem horário, fixado no painel'
+          : reminder.isPersistent
+              ? 'Lembrete fixado no painel'
+              : 'Está na hora deste lembrete.';
+
+  @override
+  Future<void> reconcile(List<Reminder> reminders) async {
+    final active = Platform.isAndroid || Platform.isIOS
+        ? await _plugin.getActiveNotifications()
+        : <ActiveNotification>[];
+    final pending = await _plugin.pendingNotificationRequests();
+    final existingIds = <int>{
+      ...active.map((item) => item.id).whereType<int>(),
+      ...pending.map((item) => item.id),
+    };
+    final retainedIds = <int>{
+      for (final reminder in reminders)
+        if ((reminder.isPersistent &&
+                (!reminder.isCompleted ||
+                    reminder.keepNotificationAfterCompletion)) ||
+            (reminder.kind == NotificationKind.temporary &&
+                !reminder.isCompleted))
+          reminder.notificationId,
+    };
+    for (final id in existingIds.difference(retainedIds)) {
+      await _plugin.cancel(id);
+    }
+
+    final now = DateTime.now();
+    for (final reminder in reminders) {
+      if (reminder.isPersistent &&
+          (!reminder.isCompleted || reminder.keepNotificationAfterCompletion)) {
+        final stale = active.any((item) =>
+            item.id == reminder.notificationId &&
+            ((item.title != null && item.title != reminder.title) ||
+                (item.body != null && item.body != _bodyFor(reminder))));
+        if (stale) await _plugin.cancel(reminder.notificationId);
+        await restorePersistent(reminder);
+      } else if (reminder.kind == NotificationKind.temporary &&
+          !reminder.isCompleted) {
+        if (reminder.scheduledAt!.isAfter(now)) {
+          await _plugin.cancel(reminder.notificationId);
+          await schedule(reminder);
+        } else if (pending.any((item) => item.id == reminder.notificationId)) {
+          await _plugin.cancel(reminder.notificationId);
+        }
+      }
+    }
   }
 
   @override

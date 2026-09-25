@@ -371,11 +371,13 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     Navigator.pop(context);
     if (!permissionGranted) {
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             kIsWeb
                 ? 'Lembrete salvo neste navegador, sem notificação.'
-                : 'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
+                : !widget.controller.notificationsAvailable
+                    ? 'Lembrete salvo. Avisos indisponíveis; tente novamente na lista.'
+                    : 'Lembrete salvo. Ative as notificações nas configurações do aparelho.',
           ),
         ),
       );

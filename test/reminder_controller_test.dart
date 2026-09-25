@@ -269,6 +269,73 @@ void main() {
     expect(controller.todayProgress, 0);
   });
 
+  test('abre e edita lembretes enquanto alertas estão indisponíveis', () async {
+    final now = DateTime.now();
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'offline',
+          notificationId: 17,
+          title: 'Título original',
+          scheduledAt: now.add(const Duration(days: 1)),
+          kind: NotificationKind.temporary,
+          createdAt: now,
+        ),
+      ];
+    final notifications = _FakeNotificationService()..failInitialize = true;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+      notificationsAvailable: false,
+    );
+
+    await controller.load();
+    expect(controller.active.single.title, 'Título original');
+    expect(await controller.retryNotifications(), isFalse);
+    expect(controller.notificationsAvailable, isFalse);
+    expect(controller.notificationFailure, NotificationFailure.initialization);
+
+    final updated = controller.active.single.copyWith(title: 'Título alterado');
+    expect(await controller.update(updated), isFalse);
+    expect(repository.items.single.title, 'Título alterado');
+    expect(notifications.scheduled, isEmpty);
+
+    notifications.failInitialize = false;
+    expect(await controller.retryNotifications(), isTrue);
+    expect(controller.notificationsAvailable, isTrue);
+    expect(notifications.reconciled.single.title, 'Título alterado');
+  });
+
+  test('falha de reconciliação mantém a lista acessível', () async {
+    final now = DateTime.now();
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'restore-fail',
+          notificationId: 19,
+          title: 'Consulta',
+          scheduledAt: now.add(const Duration(days: 1)),
+          kind: NotificationKind.temporary,
+          createdAt: now,
+        ),
+      ];
+    final notifications = _FakeNotificationService()..failReconcile = true;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+      notificationsAvailable: false,
+    );
+
+    await controller.load();
+    expect(await controller.retryNotifications(), isFalse);
+    expect(controller.notificationFailure, NotificationFailure.restoration);
+    expect(controller.active.single.title, 'Consulta');
+
+    notifications.failReconcile = false;
+    expect(await controller.retryNotifications(), isTrue);
+    expect(controller.notificationFailure, isNull);
+  });
+
   test('serialização preserva o tipo de notificação', () {
     final original = Reminder(
       id: '1',
@@ -404,6 +471,9 @@ class _FakeNotificationService implements NotificationService {
   final List<Reminder> restored = [];
   bool permissionGranted = true;
   bool failNextSchedule = false;
+  bool failInitialize = false;
+  bool failReconcile = false;
+  final List<Reminder> reconciled = [];
 
   @override
   Future<void> cancel(int notificationId) async {
@@ -411,7 +481,17 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    if (failInitialize) throw StateError('Serviço indisponível');
+  }
+
+  @override
+  Future<void> reconcile(List<Reminder> reminders) async {
+    if (failReconcile) throw StateError('Restauração indisponível');
+    reconciled
+      ..clear()
+      ..addAll(reminders);
+  }
 
   @override
   Future<bool> requestPermission(NotificationKind kind) async =>

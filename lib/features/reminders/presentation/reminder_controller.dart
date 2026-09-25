@@ -7,16 +7,50 @@ import '../domain/notification_appearance.dart';
 import '../domain/reminder.dart';
 import '../services/notification_service.dart';
 
+enum NotificationFailure { initialization, restoration }
+
 class ReminderController extends ChangeNotifier {
   ReminderController({
     required ReminderRepository repository,
     required NotificationService notificationService,
+    bool notificationsAvailable = true,
   })  : _repository = repository,
-        _notificationService = notificationService;
+        _notificationService = notificationService,
+        _notificationsAvailable = notificationsAvailable;
 
   final ReminderRepository _repository;
   final NotificationService _notificationService;
   final List<Reminder> _reminders = [];
+  bool _notificationsAvailable;
+  NotificationFailure? _notificationFailure;
+  Future<bool>? _retryInProgress;
+
+  bool get notificationsAvailable => _notificationsAvailable;
+  NotificationFailure? get notificationFailure => _notificationFailure;
+
+  Future<bool> retryNotifications() => _retryInProgress ??=
+      _retryNotifications().whenComplete(() => _retryInProgress = null);
+
+  Future<bool> _retryNotifications() async {
+    var initialized = false;
+    try {
+      await _notificationService.initialize();
+      initialized = true;
+      await _notificationService.reconcile(_reminders);
+      _notificationsAvailable = true;
+      _notificationFailure = null;
+      notifyListeners();
+      return true;
+    } catch (error) {
+      debugPrint('Falha ao iniciar ou reconciliar notificações: $error');
+      _notificationsAvailable = false;
+      _notificationFailure = initialized
+          ? NotificationFailure.restoration
+          : NotificationFailure.initialization;
+      notifyListeners();
+      return false;
+    }
+  }
 
   List<Reminder> get reminders {
     final sorted = [..._reminders]..sort((a, b) {
@@ -50,17 +84,22 @@ class ReminderController extends ChangeNotifier {
     _reminders
       ..clear()
       ..addAll(await _repository.load());
-    await restorePersistentNotifications();
+    if (_notificationsAvailable) await restorePersistentNotifications();
     notifyListeners();
   }
 
   Future<void> restorePersistentNotifications() async {
+    if (!_notificationsAvailable) return;
     for (final reminder in _reminders) {
       if (_shouldShowPersistent(reminder)) {
         try {
           await _notificationService.restorePersistent(reminder);
-        } catch (_) {
-          // A notification failure must not prevent access to saved reminders.
+        } catch (error) {
+          debugPrint('Falha ao restaurar notificação: $error');
+          _notificationsAvailable = false;
+          _notificationFailure = NotificationFailure.restoration;
+          notifyListeners();
+          return;
         }
       }
     }
@@ -113,7 +152,8 @@ class ReminderController extends ChangeNotifier {
       createdAt: now,
     );
 
-    final permitted = await _notificationService.requestPermission(kind);
+    final permitted = _notificationsAvailable &&
+        await _notificationService.requestPermission(kind);
     if (permitted) await _notificationService.schedule(reminder);
     try {
       await _repository.save([..._reminders, reminder]);
@@ -139,6 +179,14 @@ class ReminderController extends ChangeNotifier {
     }
     final index = _reminders.indexWhere((item) => item.id == updated.id);
     if (index < 0) return true;
+
+    if (!_notificationsAvailable) {
+      final next = [..._reminders]..[index] = updated;
+      await _repository.save(next);
+      _reminders[index] = updated;
+      notifyListeners();
+      return false;
+    }
 
     final previous = _reminders[index];
     final replaceVisiblePersistent =
@@ -200,16 +248,19 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<void> remove(Reminder reminder) async {
-    await _notificationService.cancel(reminder.notificationId);
+    if (_notificationsAvailable) {
+      await _notificationService.cancel(reminder.notificationId);
+    }
     try {
       await _repository.save(
         _reminders.where((item) => item.id != reminder.id).toList(),
       );
     } catch (_) {
-      if (_shouldShowPersistent(reminder) ||
-          (reminder.kind == NotificationKind.temporary &&
-              !reminder.isCompleted &&
-              (reminder.scheduledAt?.isAfter(DateTime.now()) ?? false))) {
+      if (_notificationsAvailable &&
+          (_shouldShowPersistent(reminder) ||
+              (reminder.kind == NotificationKind.temporary &&
+                  !reminder.isCompleted &&
+                  (reminder.scheduledAt?.isAfter(DateTime.now()) ?? false)))) {
         try {
           await _notificationService.schedule(reminder);
         } catch (_) {

@@ -16,5 +16,8 @@ class LocalNotificationService implements NotificationService {
   Future<void> restorePersistent(Reminder reminder) async {}
 
   @override
+  Future<void> reconcile(List<Reminder> reminders) async {}
+
+  @override
   Future<void> cancel(int notificationId) async {}
 }
