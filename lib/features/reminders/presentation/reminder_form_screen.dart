@@ -313,8 +313,13 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final original = widget.reminder;
+    final keepsOverdueSchedule = original != null &&
+        original.kind == _kind &&
+        original.scheduledAt == _scheduledAt;
     if (_kind != NotificationKind.unscheduled &&
-        !_scheduledAt.isAfter(DateTime.now())) {
+        !_scheduledAt.isAfter(DateTime.now()) &&
+        !keepsOverdueSchedule) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escolha um horário futuro.')),
       );

@@ -118,6 +118,67 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('edita texto de lembrete atrasado sem reagendar', (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final originalDate = DateTime.now().subtract(const Duration(days: 1));
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'overdue-edit',
+          notificationId: 31,
+          title: 'Texto antigo',
+          scheduledAt: originalDate,
+          kind: NotificationKind.temporary,
+          createdAt: originalDate,
+        ),
+      ];
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Texto antigo').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextFormField).first, 'Texto atualizado');
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.title, 'Texto atualizado');
+    expect(repository.items.single.scheduledAt, originalDate);
+    expect(find.text('Escolha um horário futuro.'), findsNothing);
+
+    await tester.tap(find.text('Texto atualizado').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Data'));
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+    if (tomorrow.month != now.month) {
+      await tester.tap(find.byTooltip('Próximo mês'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(CalendarDatePicker),
+            matching: find.text(tomorrow.day.toString()),
+          )
+          .last,
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.scheduledAt!.year, tomorrow.year);
+    expect(repository.items.single.scheduledAt!.month, tomorrow.month);
+    expect(repository.items.single.scheduledAt!.day, tomorrow.day);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('menu visível permite excluir com confirmação', (tester) async {
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1;

@@ -1,6 +1,6 @@
 # Backlog de produto — Lembretes
 
-Atualizado em 25/09/2026. Origem: [análise de produto e experiência](product-analysis.md). As tarefas abaixo são propostas e **não foram implementadas**. P0 trata confiança e bloqueios; P1 melhora o fluxo principal; P2 amplia usos após estabilização.
+Atualizado em 25/09/2026. Origem: [análise de produto e experiência](product-analysis.md). As tarefas abaixo são propostas. Conclusões são registradas junto às tarefas; as demais continuam pendentes. P0 trata confiança e bloqueios; P1 melhora o fluxo principal; P2 amplia usos após estabilização.
 
 ## Visão geral
 
@@ -27,6 +27,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 ## P0 — confiança no comportamento atual
 
 ### BL-01 — Editar item atrasado sem reagendar
+
+**Estado:** concluída em 25/09/2026.
 
 **Problema:** o formulário rejeita qualquer horário passado mesmo se a pessoa só alterar título, observação ou aparência.
 
