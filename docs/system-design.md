@@ -21,7 +21,7 @@ SharedPreferences (JSON)
 
 ### Apresentação
 
-`HomeScreen` e `ReminderFormScreen` mostram o estado e encaminham ações. Elas não conhecem detalhes de armazenamento ou plugins nativos.
+`HomeScreen` e `ReminderFormScreen` mostram o estado e encaminham ações. Elas não conhecem detalhes de armazenamento ou plugins nativos. O formulário oferece atalhos de data e mantém observação e aparência em uma seção expansível, sem exigir esses campos para criar a tarefa.
 
 ### Aplicação e domínio
 

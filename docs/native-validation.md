@@ -43,3 +43,7 @@ Os lembretes criados para esta matriz foram excluídos. As permissões do pacote
 ## BL-06 — data da tarefa e modo de aviso independentes
 
 Em 25/09/2026, a versão de depuração atualizada foi instalada no mesmo emulador Android 17 (API 37). Uma tarefa futura `QA_BL06` foi salva com **Sem aviso**: apareceu na lista com horário e sem notificação ativa do sistema (`dumpsys notification`). Ao editá-la para **Fixar agora**, o Android solicitou `POST_NOTIFICATIONS`; depois de concedida, a lista mostrou **Aviso configurado** e o sistema publicou a notificação. Excluir o item removeu a notificação. O item de teste foi apagado e a permissão foi devolvida ao estado negado. O agendamento de **Avisar no horário** já foi exercitado na matriz anterior; a combinação nova com data sem aviso foi verificada aqui.
+
+## BL-08 — captura rápida
+
+Em 25/09/2026, o formulário atualizado foi instalado no emulador Android 17 (API 37). A árvore de acessibilidade mostrou os quatro atalhos de data. A sequência **Sem data → Amanhã** exibiu 26/09/2026 e permitiu salvar `QA_BL08` sem aviso; a lista mostrou a tarefa para amanhã e `dumpsys notification` não encontrou notificação correspondente. O item de teste foi excluído. O teste de widget cobre largura de 320 px, fonte ampliada a 1,3×, tema escuro, abertura de **Mais opções** e persistência da observação.

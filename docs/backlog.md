@@ -112,6 +112,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-08 — Captura rápida e detalhes opcionais
 
+**Estado:** implementada em 25/09/2026; testada em widget com 320 px, fonte 1,3× e tema escuro, e no emulador Android 17.
+
 **Problema:** aparência e prévia ocupam a mesma etapa da criação básica.
 
 **Critérios de aceite:**

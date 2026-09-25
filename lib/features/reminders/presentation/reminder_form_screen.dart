@@ -34,6 +34,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   late NotificationAccent _accent;
   late NotificationSymbol _symbol;
   bool _saving = false;
+  late bool _advancedExpanded;
 
   bool get _isEditing => widget.reminder != null;
 
@@ -56,6 +57,12 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     _visualStyle = reminder?.visualStyle ?? NotificationVisualStyle.expanded;
     _accent = reminder?.accent ?? NotificationAccent.red;
     _symbol = reminder?.symbol ?? NotificationSymbol.bell;
+    _advancedExpanded = reminder != null &&
+        (reminder.notes.isNotEmpty ||
+            reminder.visualStyle != NotificationVisualStyle.expanded ||
+            (reminder.accent != NotificationAccent.blue &&
+                reminder.accent != NotificationAccent.red) ||
+            reminder.symbol != NotificationSymbol.bell);
     _titleController.addListener(_refreshPreview);
     _notesController.addListener(_refreshPreview);
   }
@@ -137,27 +144,40 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
               const SizedBox(height: 28),
               const _FieldLabel('Quando fazer?'),
               const SizedBox(height: 8),
-              Material(
-                color: Theme.of(context).colorScheme.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Theme.of(context).dividerColor),
-                ),
-                child: SwitchListTile.adaptive(
-                  title: const Text('Sem data e hora'),
-                  subtitle: const Text('Guarde a tarefa na lista sem prazo.'),
-                  secondary: Icon(
-                    Icons.inbox_outlined,
-                    color: Theme.of(context).colorScheme.primary,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Hoje'),
+                    selected: _hasDate && _isDay(_scheduledAt, DateTime.now()),
+                    onSelected: (_) => _selectDateShortcut(0),
                   ),
-                  value: !_hasDate,
-                  onChanged: (enabled) => setState(() {
-                    _hasDate = !enabled;
-                    if (enabled && _alertMode == ReminderAlertMode.atTime) {
-                      _alertMode = ReminderAlertMode.none;
-                    }
-                  }),
-                ),
+                  ChoiceChip(
+                    label: const Text('Amanhã'),
+                    selected: _hasDate &&
+                        _isDay(
+                            _scheduledAt,
+                            DateTime(DateTime.now().year, DateTime.now().month,
+                                DateTime.now().day + 1)),
+                    onSelected: (_) => _selectDateShortcut(1),
+                  ),
+                  ActionChip(
+                    label: const Text('Escolher data'),
+                    avatar: const Icon(Icons.calendar_today_outlined, size: 18),
+                    onPressed: _pickDate,
+                  ),
+                  ChoiceChip(
+                    label: const Text('Sem data'),
+                    selected: !_hasDate,
+                    onSelected: (_) => setState(() {
+                      _hasDate = false;
+                      if (_alertMode == ReminderAlertMode.atTime) {
+                        _alertMode = ReminderAlertMode.none;
+                      }
+                    }),
+                  ),
+                ],
               ),
               if (_hasDate) ...[
                 const SizedBox(height: 8),
@@ -229,34 +249,48 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 28),
-              const _FieldLabel('Observação (opcional)'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _notesController,
-                textCapitalization: TextCapitalization.sentences,
-                minLines: 3,
-                maxLines: 5,
-                maxLength: 240,
-                style: Theme.of(context).textTheme.bodyLarge,
-                decoration: const InputDecoration(
-                  hintText: 'Adicione algum detalhe útil',
-                ),
+              ExpansionTile(
+                initiallyExpanded: _advancedExpanded,
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                title: const Text('Mais opções'),
+                subtitle: const Text('Observação e aparência do aviso'),
+                onExpansionChanged: (value) => _advancedExpanded = value,
+                children: [
+                  const SizedBox(height: 12),
+                  const _FieldLabel('Observação (opcional)'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _notesController,
+                    textCapitalization: TextCapitalization.sentences,
+                    minLines: 3,
+                    maxLines: 5,
+                    maxLength: 240,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    decoration: const InputDecoration(
+                      hintText: 'Adicione algum detalhe útil',
+                    ),
+                  ),
+                  if (_alertMode != ReminderAlertMode.none) ...[
+                    const SizedBox(height: 20),
+                    NotificationAppearanceSelector(
+                      visualStyle: _visualStyle,
+                      accent: _accent,
+                      symbol: _symbol,
+                      alertMode: _alertMode,
+                      hasDate: _hasDate,
+                      title: _titleController.text,
+                      notes: _notesController.text,
+                      onStyleChanged: (value) =>
+                          setState(() => _visualStyle = value),
+                      onAccentChanged: (value) =>
+                          setState(() => _accent = value),
+                      onSymbolChanged: (value) =>
+                          setState(() => _symbol = value),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 28),
-              if (_alertMode != ReminderAlertMode.none)
-                NotificationAppearanceSelector(
-                  visualStyle: _visualStyle,
-                  accent: _accent,
-                  symbol: _symbol,
-                  alertMode: _alertMode,
-                  hasDate: _hasDate,
-                  title: _titleController.text,
-                  notes: _notesController.text,
-                  onStyleChanged: (value) =>
-                      setState(() => _visualStyle = value),
-                  onAccentChanged: (value) => setState(() => _accent = value),
-                  onSymbolChanged: (value) => setState(() => _symbol = value),
-                ),
             ],
           ),
         ),
@@ -275,6 +309,35 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     );
   }
 
+  bool _isDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  void _selectDateShortcut(int daysFromToday) {
+    final now = DateTime.now();
+    final chosen = DateTime(
+      now.year,
+      now.month,
+      now.day + daysFromToday,
+      _scheduledAt.hour,
+      _scheduledAt.minute,
+    );
+    var safeDate = chosen;
+    if (daysFromToday == 0 && !chosen.isAfter(now)) {
+      safeDate = now.add(const Duration(minutes: 1));
+      if (!_isDay(safeDate, now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Não há mais horários hoje. Escolha amanhã.')),
+        );
+        return;
+      }
+    }
+    setState(() {
+      _hasDate = true;
+      _scheduledAt = safeDate;
+    });
+  }
+
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
     final value = await showDatePicker(
@@ -286,6 +349,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     );
     if (value == null) return;
     setState(() {
+      _hasDate = true;
       _scheduledAt = DateTime(
         value.year,
         value.month,

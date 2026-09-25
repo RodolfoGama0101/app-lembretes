@@ -192,6 +192,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('captura rápida mostra atalhos e mantém detalhes opcionais',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.binding.platformDispatcher.platformBrightnessTestValue =
+        Brightness.dark;
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(
+        tester.binding.platformDispatcher.clearPlatformBrightnessTestValue);
+    addTearDown(
+        tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Tarefa rápida');
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    expect(find.text('Hoje'), findsOneWidget);
+    expect(find.text('Amanhã'), findsOneWidget);
+    expect(find.text('Escolher data'), findsOneWidget);
+    expect(find.text('Sem data'), findsOneWidget);
+    expect(find.text('Observação (opcional)'), findsNothing);
+
+    await tester.tap(find.text('Sem data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Amanhã'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Mais opções'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Mais opções')),
+      alignment: 0.2,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Observação (opcional)'), findsNothing);
+    await tester.tap(find.text('Mais opções'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Observação (opcional)'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+        find.byType(TextFormField).last, 'Levar comprovante');
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    final saved = repository.items.single;
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    expect(saved.scheduledAt!.day, tomorrow.day);
+    expect(saved.alertMode, ReminderAlertMode.none);
+    expect(saved.notes, 'Levar comprovante');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('formulário salva estilo, cor e ícone escolhidos',
       (tester) async {
     await initializeDateFormatting('pt_BR');
@@ -205,6 +272,13 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Personalizado');
+    await tester.scrollUntilVisible(
+      find.text('Mais opções'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Mais opções'));
+    await tester.pumpAndSettle();
 
     for (final label in ['Compacto', 'Amarelo', 'Estrela']) {
       await tester.scrollUntilVisible(
@@ -387,7 +461,7 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Ideia sem prazo');
-    await tester.tap(find.text('Sem data e hora'));
+    await tester.tap(find.text('Sem data'));
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
@@ -436,9 +510,9 @@ void main() {
     await tester.pumpWidget(LembretesApp(controller: controller));
     await tester.tap(find.text('Ideia sem prazo'));
     await tester.pumpAndSettle();
-    expect(find.text('Sem data e hora'), findsOneWidget);
+    expect(find.text('Sem data'), findsOneWidget);
 
-    await tester.tap(find.text('Sem data e hora'));
+    await tester.tap(find.text('Amanhã'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Avisar no horário'),
@@ -511,7 +585,7 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Sem prazo');
-    await tester.tap(find.text('Sem data e hora'));
+    await tester.tap(find.text('Sem data'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Fixar agora'),

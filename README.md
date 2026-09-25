@@ -5,7 +5,7 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 ## Funcionalidades
 
 - Criar tarefas com título, observação opcional e data/hora ou sem data. O seletor de hora usa formato de 24 horas (por exemplo, 18:45).
-- Escolher separadamente o aviso: **Sem aviso**, **Avisar no horário** (somente com data) ou **Fixar agora**. O formulário resume o efeito antes de salvar.
+- Escolher separadamente o aviso: **Sem aviso**, **Avisar no horário** (somente com data) ou **Fixar agora**. O formulário resume o efeito antes de salvar. Atalhos **Hoje**, **Amanhã**, **Escolher data** e **Sem data** agilizam a definição do prazo; observação e aparência ficam em **Mais opções**.
 - Editar, marcar como concluído, reabrir e excluir lembretes.
 - Consultar itens pendentes e concluídos, com destaque para o próximo lembrete e tarefas atrasadas.
 - Escolher, para avisos, texto compacto ou expandível, cor e símbolo. No Android, a cor aparece no ícone grande da notificação e em detalhes definidos pelo sistema.
