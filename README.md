@@ -99,3 +99,7 @@ Para gerar novamente os ícones grandes das notificações Android após mudar a
 ```bash
 python tool/generate_notification_badges.py
 ```
+
+## Planejamento de produto
+
+A [análise de produto e experiência](docs/product-analysis.md) reúne achados do código, pesquisa de necessidades e propostas de design. O [backlog](docs/backlog.md) organiza as melhorias por prioridade, dependência e critérios de aceite.
