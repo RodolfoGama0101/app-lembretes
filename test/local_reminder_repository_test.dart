@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:fio_lembretes/features/reminders/data/local_reminder_repository.dart';
+import 'package:fio_lembretes/features/reminders/domain/notification_appearance.dart';
 import 'package:fio_lembretes/features/reminders/domain/reminder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +30,30 @@ void main() {
     expect(reminders, hasLength(1));
     expect(reminders.single.id, 'valid');
   });
+  test('dados antigos recebem a aparência original', () async {
+    final original = Reminder(
+      id: 'old',
+      notificationId: 3,
+      title: 'Aviso antigo',
+      scheduledAt: DateTime(2030, 5, 1, 10),
+      kind: NotificationKind.temporary,
+      createdAt: DateTime(2030, 4, 1),
+    ).toJson()
+      ..remove('visualStyle')
+      ..remove('accent')
+      ..remove('symbol');
+    SharedPreferences.setMockInitialValues({
+      'fio.reminders.v1': jsonEncode([original]),
+    });
+
+    final reminders = await LocalReminderRepository().load();
+
+    expect(reminders, hasLength(1));
+    expect(reminders.single.visualStyle, NotificationVisualStyle.expanded);
+    expect(reminders.single.accent, NotificationAccent.blue);
+    expect(reminders.single.symbol, NotificationSymbol.bell);
+  });
+
   test('restaura lembrete sem horário salvo no dispositivo', () async {
     final unscheduled = Reminder(
       id: 'continuous',

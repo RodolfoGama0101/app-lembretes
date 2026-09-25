@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../domain/notification_appearance.dart';
 import '../domain/reminder.dart';
 import 'reminder_controller.dart';
 import 'widgets/delete_reminder_dialog.dart';
+import 'widgets/notification_appearance_selector.dart';
 
 class ReminderFormScreen extends StatefulWidget {
   const ReminderFormScreen({
@@ -27,6 +29,9 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
   late DateTime _scheduledAt;
   late NotificationKind _kind;
   late NotificationKind _lastTimedKind;
+  late NotificationVisualStyle _visualStyle;
+  late NotificationAccent _accent;
+  late NotificationSymbol _symbol;
   bool _saving = false;
 
   bool get _isEditing => widget.reminder != null;
@@ -46,10 +51,17 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           initialDate.hour,
         );
     _kind = reminder?.kind ?? NotificationKind.temporary;
+    _visualStyle = reminder?.visualStyle ?? NotificationVisualStyle.expanded;
+    _accent = reminder?.accent ?? NotificationAccent.blue;
+    _symbol = reminder?.symbol ?? NotificationSymbol.bell;
+    _titleController.addListener(_refreshPreview);
+    _notesController.addListener(_refreshPreview);
     _lastTimedKind = _kind == NotificationKind.persistent
         ? NotificationKind.persistent
         : NotificationKind.temporary;
   }
+
+  void _refreshPreview() => setState(() {});
 
   @override
   void dispose() {
@@ -212,6 +224,16 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              NotificationAppearanceSelector(
+                visualStyle: _visualStyle,
+                accent: _accent,
+                symbol: _symbol,
+                title: _titleController.text,
+                notes: _notesController.text,
+                onStyleChanged: (value) => setState(() => _visualStyle = value),
+                onAccentChanged: (value) => setState(() => _accent = value),
+                onSymbolChanged: (value) => setState(() => _symbol = value),
+              ),
             ],
           ),
         ),
@@ -308,6 +330,9 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
             scheduledAt:
                 _kind == NotificationKind.unscheduled ? null : _scheduledAt,
             kind: _kind,
+            visualStyle: _visualStyle,
+            accent: _accent,
+            symbol: _symbol,
             keepNotificationAfterCompletion:
                 _kind != NotificationKind.temporary,
           ),
@@ -319,6 +344,9 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           scheduledAt:
               _kind == NotificationKind.unscheduled ? null : _scheduledAt,
           kind: _kind,
+          visualStyle: _visualStyle,
+          accent: _accent,
+          symbol: _symbol,
         );
       }
     } catch (_) {

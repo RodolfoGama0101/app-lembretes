@@ -1,5 +1,6 @@
 import 'package:fio_lembretes/app.dart';
 import 'package:fio_lembretes/features/reminders/data/reminder_repository.dart';
+import 'package:fio_lembretes/features/reminders/domain/notification_appearance.dart';
 import 'package:fio_lembretes/features/reminders/domain/reminder.dart';
 import 'package:fio_lembretes/features/reminders/presentation/reminder_controller.dart';
 import 'package:fio_lembretes/features/reminders/services/notification_service.dart';
@@ -64,6 +65,45 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('formulário salva estilo, cor e ícone escolhidos',
+      (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Personalizado');
+
+    for (final label in ['Compacto', 'Verde', 'Estrela']) {
+      await tester.scrollUntilVisible(
+        find.text(label),
+        180,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(
+        repository.items.single.visualStyle, NotificationVisualStyle.compact);
+    expect(repository.items.single.accent, NotificationAccent.green);
+    expect(repository.items.single.symbol, NotificationSymbol.star);
     expect(tester.takeException(), isNull);
   });
 

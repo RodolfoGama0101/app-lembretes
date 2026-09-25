@@ -8,12 +8,15 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 - Editar, marcar como concluído, reabrir e excluir lembretes.
 - Consultar itens pendentes e concluídos, com destaque para o próximo lembrete e tarefas atrasadas.
 - Receber notificações locais no Android e no iOS, conforme o tipo escolhido.
+- Escolher, por lembrete, o estilo compacto ou expandido, a cor de destaque e o ícone do alerta.
 
 | Tipo | Quando aparece no celular | Ao concluir |
 | --- | --- | --- |
 | **Temporária** | No horário escolhido; pode ser dispensada. | O alerta agendado é cancelado. |
 | **Permanente** | Assim que o lembrete é salvo; a data e a hora organizam a tarefa. | Continua visível até o lembrete ser excluído. |
 | **Sem horário** | Assim que o lembrete é salvo, como aviso permanente. | Continua visível até o lembrete ser excluído. |
+
+No Android, estilo, cor de destaque e ícone são aplicados à notificação; a aparência final também depende da versão e das configurações do sistema. No iOS, o sistema controla o visual do banner, e a cor e o ícone escolhidos aparecem na lista do aplicativo. Na Web, o formulário oferece uma prévia, mas não envia alertas. Lembretes já salvos mantêm o visual anterior: expandido, azul e sino.
 
 No Android 14 ou posterior, o sistema pode permitir dispensar uma notificação permanente pelo painel. O aplicativo a restaura ao abrir ou retomar. No iOS, o sistema também pode permitir dispensá-la.
 

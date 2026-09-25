@@ -27,6 +27,8 @@ SharedPreferences (JSON)
 
 `ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável e `NotificationKind` diferencia alertas temporários de permanentes.
 
+A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são persistidos junto com os demais campos. Registros antigos recebem os padrões anteriores durante a leitura. A edição republica o alerta quando algum desses campos muda.
+
 ### Dados
 
 `ReminderRepository` é um contrato. A implementação atual, `LocalReminderRepository`, salva uma lista JSON versionada em `SharedPreferences`. Uma futura implementação remota poderá manter o mesmo contrato ou ser combinada com cache local.

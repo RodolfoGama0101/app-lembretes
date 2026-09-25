@@ -8,6 +8,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../domain/notification_appearance.dart';
 import '../domain/reminder.dart';
 import 'notification_service.dart';
 
@@ -75,15 +76,21 @@ class LocalNotificationService implements NotificationService {
       channelDescription: persistent
           ? 'Lembretes que aparecem ao salvar e ficam até a exclusão'
           : 'Lembretes que podem ser dispensados normalmente',
-      icon: 'ic_stat_fio',
-      color: const Color(0xFF0072DE),
+      icon: switch (reminder.symbol) {
+        NotificationSymbol.bell => 'ic_stat_fio',
+        NotificationSymbol.star => 'ic_stat_star',
+        NotificationSymbol.check => 'ic_stat_check',
+      },
+      color: Color(reminder.accent.colorValue),
       subText: when,
       ticker: reminder.title,
-      styleInformation: BigTextStyleInformation(
-        body,
-        contentTitle: reminder.title,
-        summaryText: when,
-      ),
+      styleInformation: reminder.visualStyle == NotificationVisualStyle.expanded
+          ? BigTextStyleInformation(
+              body,
+              contentTitle: reminder.title,
+              summaryText: when,
+            )
+          : const DefaultStyleInformation(false, false),
       importance: Importance.max,
       priority: Priority.high,
       ongoing: persistent,

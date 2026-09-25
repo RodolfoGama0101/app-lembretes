@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../data/reminder_repository.dart';
+import '../domain/notification_appearance.dart';
 import '../domain/reminder.dart';
 import '../services/notification_service.dart';
 
@@ -82,6 +83,9 @@ class ReminderController extends ChangeNotifier {
     required String notes,
     required DateTime? scheduledAt,
     required NotificationKind kind,
+    NotificationVisualStyle visualStyle = NotificationVisualStyle.expanded,
+    NotificationAccent accent = NotificationAccent.blue,
+    NotificationSymbol symbol = NotificationSymbol.bell,
   }) async {
     if ((kind == NotificationKind.unscheduled) != (scheduledAt == null)) {
       throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
@@ -102,6 +106,9 @@ class ReminderController extends ChangeNotifier {
       notes: notes.trim(),
       scheduledAt: scheduledAt,
       kind: kind,
+      visualStyle: visualStyle,
+      accent: accent,
+      symbol: symbol,
       keepNotificationAfterCompletion: kind != NotificationKind.temporary,
       createdAt: now,
     );
@@ -140,7 +147,10 @@ class ReminderController extends ChangeNotifier {
         previous.kind == updated.kind &&
         previous.scheduledAt == updated.scheduledAt &&
         previous.title == updated.title &&
-        previous.notes == updated.notes;
+        previous.notes == updated.notes &&
+        previous.visualStyle == updated.visualStyle &&
+        previous.accent == updated.accent &&
+        previous.symbol == updated.symbol;
     final shouldSchedule = _shouldShowPersistent(updated) ||
         (updated.kind == NotificationKind.temporary &&
             !updated.isCompleted &&

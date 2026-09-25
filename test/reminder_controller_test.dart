@@ -1,4 +1,5 @@
 import 'package:fio_lembretes/features/reminders/data/reminder_repository.dart';
+import 'package:fio_lembretes/features/reminders/domain/notification_appearance.dart';
 import 'package:fio_lembretes/features/reminders/domain/reminder.dart';
 import 'package:fio_lembretes/features/reminders/presentation/reminder_controller.dart';
 import 'package:fio_lembretes/features/reminders/services/notification_service.dart';
@@ -25,6 +26,35 @@ void main() {
     expect(repository.items, hasLength(1));
     expect(notifications.scheduled, hasLength(1));
     expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
+  });
+
+  test('salva aparência e republica ao editar apenas o visual', () async {
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Aviso colorido',
+      notes: 'Detalhes',
+      scheduledAt: DateTime.now().add(const Duration(hours: 2)),
+      kind: NotificationKind.persistent,
+      visualStyle: NotificationVisualStyle.compact,
+      accent: NotificationAccent.green,
+      symbol: NotificationSymbol.star,
+    );
+    final reminder = controller.active.single;
+    expect(reminder.visualStyle, NotificationVisualStyle.compact);
+    expect(reminder.accent, NotificationAccent.green);
+    expect(reminder.symbol, NotificationSymbol.star);
+    expect(
+        Reminder.fromJson(reminder.toJson()).symbol, NotificationSymbol.star);
+
+    await controller
+        .update(reminder.copyWith(accent: NotificationAccent.purple));
+
+    expect(notifications.scheduled, hasLength(2));
+    expect(notifications.scheduled.last.accent, NotificationAccent.purple);
   });
 
   test('concluir cancela a notificação e move o item', () async {

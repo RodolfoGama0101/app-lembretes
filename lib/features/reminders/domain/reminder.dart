@@ -1,3 +1,5 @@
+import 'notification_appearance.dart';
+
 enum NotificationKind { temporary, persistent, unscheduled }
 
 class Reminder {
@@ -8,6 +10,9 @@ class Reminder {
     required this.scheduledAt,
     required this.kind,
     this.notes = '',
+    this.visualStyle = NotificationVisualStyle.expanded,
+    this.accent = NotificationAccent.blue,
+    this.symbol = NotificationSymbol.bell,
     this.isCompleted = false,
     bool keepNotificationAfterCompletion = false,
     required this.createdAt,
@@ -24,6 +29,9 @@ class Reminder {
   final int notificationId;
   final String title;
   final String notes;
+  final NotificationVisualStyle visualStyle;
+  final NotificationAccent accent;
+  final NotificationSymbol symbol;
   final DateTime? scheduledAt;
   final NotificationKind kind;
   final bool isCompleted;
@@ -37,6 +45,9 @@ class Reminder {
   Reminder copyWith({
     String? title,
     String? notes,
+    NotificationVisualStyle? visualStyle,
+    NotificationAccent? accent,
+    NotificationSymbol? symbol,
     DateTime? scheduledAt,
     NotificationKind? kind,
     bool? isCompleted,
@@ -48,6 +59,9 @@ class Reminder {
       notificationId: notificationId,
       title: title ?? this.title,
       notes: notes ?? this.notes,
+      visualStyle: visualStyle ?? this.visualStyle,
+      accent: accent ?? this.accent,
+      symbol: symbol ?? this.symbol,
       scheduledAt: nextKind == NotificationKind.unscheduled
           ? null
           : scheduledAt ?? this.scheduledAt,
@@ -64,6 +78,9 @@ class Reminder {
         'notificationId': notificationId,
         'title': title,
         'notes': notes,
+        'visualStyle': visualStyle.name,
+        'accent': accent.name,
+        'symbol': symbol.name,
         'scheduledAt': scheduledAt?.toIso8601String(),
         'kind': kind.name,
         'isCompleted': isCompleted,
@@ -82,6 +99,16 @@ class Reminder {
       notificationId: json['notificationId']! as int,
       title: json['title']! as String,
       notes: (json['notes'] as String?) ?? '',
+      visualStyle: NotificationVisualStyle.values.byName(
+        (json['visualStyle'] as String?) ??
+            NotificationVisualStyle.expanded.name,
+      ),
+      accent: NotificationAccent.values.byName(
+        (json['accent'] as String?) ?? NotificationAccent.blue.name,
+      ),
+      symbol: NotificationSymbol.values.byName(
+        (json['symbol'] as String?) ?? NotificationSymbol.bell.name,
+      ),
       scheduledAt:
           rawScheduledAt == null ? null : DateTime.parse(rawScheduledAt),
       kind: kind,

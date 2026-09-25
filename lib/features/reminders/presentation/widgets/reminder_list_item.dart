@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../notification_appearance_display.dart';
 import '../../domain/reminder.dart';
 
 class ReminderListItem extends StatelessWidget {
@@ -22,7 +23,7 @@ class ReminderListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final persistent = reminder.isPersistent;
-    final accent = theme.colorScheme.primary;
+    final accent = reminder.accent.color;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Dismissible(
@@ -64,7 +65,7 @@ class ReminderListItem extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: reminder.isUnscheduled
-                        ? Icon(Icons.push_pin_rounded, color: accent, size: 22)
+                        ? Icon(reminder.symbol.icon, color: accent, size: 22)
                         : Text(
                             DateFormat('HH:mm').format(reminder.scheduledAt!),
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -99,11 +100,7 @@ class ReminderListItem extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              kIsWeb && !reminder.isUnscheduled
-                                  ? Icons.notifications_off_outlined
-                                  : persistent
-                                      ? Icons.push_pin_outlined
-                                      : Icons.notifications_none_rounded,
+                              reminder.symbol.icon,
                               size: 14,
                               color: theme.textTheme.bodyMedium?.color,
                             ),
