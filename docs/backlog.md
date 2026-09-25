@@ -76,6 +76,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-05 — Caixa de entrada sem data
 
+**Estado:** concluída em 25/09/2026 no fluxo Dart; comportamento de notificações nativas integra BL-04.
+
 **Problema:** Sem horário publica aviso permanente ao salvar.
 
 **Critérios de aceite:**

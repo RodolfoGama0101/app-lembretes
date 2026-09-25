@@ -1,6 +1,6 @@
 import 'notification_appearance.dart';
 
-enum NotificationKind { temporary, persistent, unscheduled }
+enum NotificationKind { temporary, persistent, unscheduled, inbox }
 
 class Reminder {
   const Reminder({
@@ -21,7 +21,9 @@ class Reminder {
                 (kind == NotificationKind.persistent &&
                     keepNotificationAfterCompletion),
         assert(
-          (kind == NotificationKind.unscheduled) == (scheduledAt == null),
+          (kind == NotificationKind.unscheduled ||
+                  kind == NotificationKind.inbox) ==
+              (scheduledAt == null),
           'Only reminders without a time can omit scheduledAt.',
         );
 
@@ -39,7 +41,10 @@ class Reminder {
   final DateTime createdAt;
 
   bool get isUnscheduled => kind == NotificationKind.unscheduled;
-  bool get isPersistent => kind != NotificationKind.temporary;
+  bool get hasNoDate => scheduledAt == null;
+  bool get isPersistent =>
+      kind == NotificationKind.persistent ||
+      kind == NotificationKind.unscheduled;
   bool get isPast => scheduledAt?.isBefore(DateTime.now()) ?? false;
 
   Reminder copyWith({
@@ -62,7 +67,8 @@ class Reminder {
       visualStyle: visualStyle ?? this.visualStyle,
       accent: accent ?? this.accent,
       symbol: symbol ?? this.symbol,
-      scheduledAt: nextKind == NotificationKind.unscheduled
+      scheduledAt: nextKind == NotificationKind.unscheduled ||
+              nextKind == NotificationKind.inbox
           ? null
           : scheduledAt ?? this.scheduledAt,
       kind: nextKind,
@@ -91,7 +97,9 @@ class Reminder {
   factory Reminder.fromJson(Map<String, Object?> json) {
     final rawScheduledAt = json['scheduledAt'] as String?;
     final kind = NotificationKind.values.byName(json['kind']! as String);
-    if ((kind == NotificationKind.unscheduled) != (rawScheduledAt == null)) {
+    if ((kind == NotificationKind.unscheduled ||
+            kind == NotificationKind.inbox) !=
+        (rawScheduledAt == null)) {
       throw const FormatException('Tipo e horário incompatíveis.');
     }
     return Reminder(

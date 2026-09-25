@@ -91,8 +91,14 @@ class ReminderListItem extends StatelessWidget {
                       color: accent.withValues(alpha: .1),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: reminder.isUnscheduled
-                        ? Icon(reminder.symbol.icon, color: accent, size: 22)
+                    child: reminder.hasNoDate
+                        ? Icon(
+                            reminder.kind == NotificationKind.inbox
+                                ? Icons.inbox_outlined
+                                : reminder.symbol.icon,
+                            color: accent,
+                            size: 22,
+                          )
                         : Text(
                             DateFormat('HH:mm').format(reminder.scheduledAt!),
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -127,20 +133,24 @@ class ReminderListItem extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              reminder.symbol.icon,
+                              reminder.kind == NotificationKind.inbox
+                                  ? Icons.notifications_off_outlined
+                                  : reminder.symbol.icon,
                               size: 14,
                               color: theme.textTheme.bodyMedium?.color,
                             ),
                             const SizedBox(width: 5),
                             Flexible(
                               child: Text(
-                                reminder.isUnscheduled
-                                    ? 'Sem horário • permanente'
-                                    : kIsWeb
-                                        ? 'Sem notificação'
-                                        : persistent
-                                            ? 'Permanente'
-                                            : 'Temporária',
+                                reminder.kind == NotificationKind.inbox
+                                    ? 'Sem data • sem aviso'
+                                    : reminder.isUnscheduled
+                                        ? 'Sem horário • permanente'
+                                        : kIsWeb
+                                            ? 'Sem notificação'
+                                            : persistent
+                                                ? 'Permanente'
+                                                : 'Temporária',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodyMedium

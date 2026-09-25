@@ -25,7 +25,7 @@ SharedPreferences (JSON)
 
 ### Aplicação e domínio
 
-`ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável e `NotificationKind` diferencia alertas temporários de permanentes.
+`ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável. `NotificationKind` distingue aviso temporário, permanente, aviso fixo sem data (`unscheduled`) e caixa de entrada sem data e sem aviso (`inbox`). Os dois últimos têm `scheduledAt == null`; apenas `unscheduled` publica notificação.
 
 A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são persistidos junto com os demais campos. Registros antigos recebem os padrões anteriores durante a leitura. Novos lembretes usam vermelho por padrão. A edição republica o alerta quando algum desses campos muda.
 
@@ -41,10 +41,10 @@ O carregamento dos dados não depende da inicialização do serviço nativo. Se 
 
 ## Fluxo principal
 
-1. O usuário informa título, data, hora e tipo.
-2. O controlador cria um identificador local, publica ou agenda a notificação quando o serviço está disponível e persiste o lembrete. Se o serviço falhar, preserva a alteração local e tenta reconciliá-la depois.
-3. O tipo permanente aparece imediatamente; o temporário é agendado no fuso horário do aparelho.
-4. Concluir cancela o alerta temporário, mas preserva o permanente. Excluir cancela qualquer notificação do lembrete.
+1. O usuário informa título e escolhe uma data e um aviso, ou cria um item sem data.
+2. A caixa de entrada (`inbox`) é persistida sem solicitar permissão ou criar notificação. Um item sem data pode ser convertido depois em aviso fixo (`unscheduled`) ou receber data. Registros antigos `unscheduled` mantêm o aviso fixo.
+3. Para tipos com aviso, o controlador cria um identificador local, publica ou agenda a notificação quando o serviço está disponível e persiste o lembrete. Se o serviço falhar, preserva a alteração local e tenta reconciliá-la depois.
+4. O tipo permanente aparece imediatamente; o temporário é agendado no fuso horário do aparelho. Concluir cancela o alerta temporário, mas preserva o permanente. Excluir cancela qualquer notificação do lembrete.
 
 ## Evolução para banco de dados
 

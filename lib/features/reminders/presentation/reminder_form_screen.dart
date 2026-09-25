@@ -129,24 +129,23 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                   side: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 child: SwitchListTile.adaptive(
-                  title: const Text('Sem horário'),
-                  subtitle: Text(
-                    kIsWeb
-                        ? 'Fica na lista sem data ou hora.'
-                        : 'Aparece ao salvar. No Android, reaparece após cerca de um dia se for dispensado.',
+                  title: const Text('Sem data e hora'),
+                  subtitle: const Text(
+                    'Guarde na lista sem prazo; escolha abaixo se quer fixar um aviso.',
                   ),
                   secondary: Icon(
-                    Icons.push_pin_rounded,
+                    Icons.inbox_outlined,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  value: _kind == NotificationKind.unscheduled,
+                  value: _kind == NotificationKind.unscheduled ||
+                      _kind == NotificationKind.inbox,
                   onChanged: (enabled) => setState(() {
-                    _kind =
-                        enabled ? NotificationKind.unscheduled : _lastTimedKind;
+                    _kind = enabled ? NotificationKind.inbox : _lastTimedKind;
                   }),
                 ),
               ),
-              if (_kind != NotificationKind.unscheduled) ...[
+              if (_kind != NotificationKind.unscheduled &&
+                  _kind != NotificationKind.inbox) ...[
                 const SizedBox(height: 8),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -211,6 +210,30 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                   ),
                 ],
               ],
+              if (_kind == NotificationKind.unscheduled ||
+                  _kind == NotificationKind.inbox) ...[
+                const SizedBox(height: 28),
+                const _FieldLabel('Aviso sem data'),
+                const SizedBox(height: 8),
+                _NotificationOption(
+                  title: 'Sem aviso',
+                  description: 'Guarda o item apenas na lista.',
+                  icon: Icons.notifications_off_outlined,
+                  selected: _kind == NotificationKind.inbox,
+                  onTap: () => setState(() => _kind = NotificationKind.inbox),
+                ),
+                const SizedBox(height: 8),
+                _NotificationOption(
+                  title: 'Fixar aviso agora',
+                  description: kIsWeb
+                      ? 'No celular, aparece ao salvar. A Web não envia alertas.'
+                      : 'Aparece ao salvar. No Android, pode reaparecer depois de dispensado.',
+                  icon: Icons.push_pin_outlined,
+                  selected: _kind == NotificationKind.unscheduled,
+                  onTap: () =>
+                      setState(() => _kind = NotificationKind.unscheduled),
+                ),
+              ],
               const SizedBox(height: 28),
               const _FieldLabel('Observação (opcional)'),
               const SizedBox(height: 8),
@@ -226,17 +249,19 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              NotificationAppearanceSelector(
-                visualStyle: _visualStyle,
-                accent: _accent,
-                symbol: _symbol,
-                kind: _kind,
-                title: _titleController.text,
-                notes: _notesController.text,
-                onStyleChanged: (value) => setState(() => _visualStyle = value),
-                onAccentChanged: (value) => setState(() => _accent = value),
-                onSymbolChanged: (value) => setState(() => _symbol = value),
-              ),
+              if (_kind != NotificationKind.inbox)
+                NotificationAppearanceSelector(
+                  visualStyle: _visualStyle,
+                  accent: _accent,
+                  symbol: _symbol,
+                  kind: _kind,
+                  title: _titleController.text,
+                  notes: _notesController.text,
+                  onStyleChanged: (value) =>
+                      setState(() => _visualStyle = value),
+                  onAccentChanged: (value) => setState(() => _accent = value),
+                  onSymbolChanged: (value) => setState(() => _symbol = value),
+                ),
             ],
           ),
         ),
@@ -319,6 +344,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
         original.kind == _kind &&
         original.scheduledAt == _scheduledAt;
     if (_kind != NotificationKind.unscheduled &&
+        _kind != NotificationKind.inbox &&
         !_scheduledAt.isAfter(DateTime.now()) &&
         !keepsOverdueSchedule) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -335,22 +361,27 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
           widget.reminder!.copyWith(
             title: _titleController.text.trim(),
             notes: _notesController.text.trim(),
-            scheduledAt:
-                _kind == NotificationKind.unscheduled ? null : _scheduledAt,
+            scheduledAt: _kind == NotificationKind.unscheduled ||
+                    _kind == NotificationKind.inbox
+                ? null
+                : _scheduledAt,
             kind: _kind,
             visualStyle: _visualStyle,
             accent: _accent,
             symbol: _symbol,
             keepNotificationAfterCompletion:
-                _kind != NotificationKind.temporary,
+                _kind == NotificationKind.persistent ||
+                    _kind == NotificationKind.unscheduled,
           ),
         );
       } else {
         deliveryStatus = await widget.controller.add(
           title: _titleController.text,
           notes: _notesController.text,
-          scheduledAt:
-              _kind == NotificationKind.unscheduled ? null : _scheduledAt,
+          scheduledAt: _kind == NotificationKind.unscheduled ||
+                  _kind == NotificationKind.inbox
+              ? null
+              : _scheduledAt,
           kind: _kind,
           visualStyle: _visualStyle,
           accent: _accent,

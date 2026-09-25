@@ -212,9 +212,9 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final overdue = controller.oldestOverdue;
     final next = overdue ?? controller.nextReminder;
-    final timeless = controller.active.where((item) => item.isUnscheduled);
-    final pinned = timeless.isEmpty ? null : timeless.first;
-    final featured = next ?? pinned;
+    final timeless = controller.active.where((item) => item.hasNoDate);
+    final undated = timeless.isEmpty ? null : timeless.first;
+    final featured = next ?? undated;
     final now = DateTime.now();
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
@@ -251,8 +251,10 @@ class _Header extends StatelessWidget {
                     child: Icon(
                       overdue != null
                           ? Icons.notifications_active_rounded
-                          : pinned != null && next == null
-                              ? Icons.push_pin_rounded
+                          : undated != null && next == null
+                              ? undated.isUnscheduled
+                                  ? Icons.push_pin_rounded
+                                  : Icons.inbox_outlined
                               : Icons.notifications_rounded,
                       color: accent,
                       size: 23,
@@ -268,8 +270,10 @@ class _Header extends StatelessWidget {
                               ? 'Lembrete atrasado'
                               : next != null
                                   ? 'Próximo lembrete'
-                                  : pinned != null
-                                      ? 'Sem horário • permanente'
+                                  : undated != null
+                                      ? undated.isUnscheduled
+                                          ? 'Sem horário • permanente'
+                                          : 'Sem data • sem aviso'
                                       : 'Tudo em dia',
                           style: theme.textTheme.bodyMedium,
                         ),
@@ -421,7 +425,7 @@ class _DateDivider extends StatelessWidget {
         date == null ? null : DateTime(date!.year, date!.month, date!.day);
     final difference = target?.difference(today).inDays;
     final label = switch (difference) {
-      null => 'Sem horário',
+      null => 'Sem data',
       0 => 'Hoje',
       1 => 'Amanhã',
       -1 => 'Ontem',

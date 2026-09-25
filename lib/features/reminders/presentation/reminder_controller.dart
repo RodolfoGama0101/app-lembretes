@@ -34,7 +34,8 @@ class ReminderController extends ChangeNotifier {
   bool get notificationsAvailable => _notificationsAvailable;
   NotificationFailure? get notificationFailure => _notificationFailure;
   NotificationDeliveryStatus? statusFor(Reminder reminder) {
-    if (reminder.isCompleted && !reminder.keepNotificationAfterCompletion) {
+    if (reminder.kind == NotificationKind.inbox ||
+        (reminder.isCompleted && !reminder.keepNotificationAfterCompletion)) {
       return NotificationDeliveryStatus.inactive;
     }
     return _notificationsAvailable
@@ -168,7 +169,9 @@ class ReminderController extends ChangeNotifier {
     NotificationAccent accent = NotificationAccent.red,
     NotificationSymbol symbol = NotificationSymbol.bell,
   }) async {
-    if ((kind == NotificationKind.unscheduled) != (scheduledAt == null)) {
+    if ((kind == NotificationKind.unscheduled ||
+            kind == NotificationKind.inbox) !=
+        (scheduledAt == null)) {
       throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
     }
     final now = DateTime.now();
@@ -190,17 +193,22 @@ class ReminderController extends ChangeNotifier {
       visualStyle: visualStyle,
       accent: accent,
       symbol: symbol,
-      keepNotificationAfterCompletion: kind != NotificationKind.temporary,
+      keepNotificationAfterCompletion: kind == NotificationKind.persistent ||
+          kind == NotificationKind.unscheduled,
       createdAt: now,
     );
 
-    final permitted = _notificationsAvailable &&
+    final needsNotification = kind != NotificationKind.inbox;
+    final permitted = needsNotification &&
+        _notificationsAvailable &&
         await _notificationService.requestPermission(kind);
-    final status = !_notificationsAvailable
-        ? NotificationDeliveryStatus.unavailable
-        : permitted
-            ? await _schedule(reminder)
-            : NotificationDeliveryStatus.permissionDenied;
+    final status = !needsNotification
+        ? NotificationDeliveryStatus.inactive
+        : !_notificationsAvailable
+            ? NotificationDeliveryStatus.unavailable
+            : permitted
+                ? await _schedule(reminder)
+                : NotificationDeliveryStatus.permissionDenied;
     try {
       await _repository.save([..._reminders, reminder]);
     } catch (_) {
@@ -220,7 +228,8 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<NotificationDeliveryStatus> update(Reminder updated) async {
-    if ((updated.kind == NotificationKind.unscheduled) !=
+    if ((updated.kind == NotificationKind.unscheduled ||
+            updated.kind == NotificationKind.inbox) !=
         (updated.scheduledAt == null)) {
       throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
     }
@@ -257,7 +266,9 @@ class ReminderController extends ChangeNotifier {
     final permitted = notificationUnchanged ||
         !shouldSchedule ||
         await _notificationService.requestPermission(updated.kind);
-    if (!notificationUnchanged && !replaceVisiblePersistent) {
+    if (!notificationUnchanged &&
+        !replaceVisiblePersistent &&
+        previous.kind != NotificationKind.inbox) {
       await _notificationService.cancel(previous.notificationId);
     }
     var status = NotificationDeliveryStatus.inactive;
@@ -307,7 +318,7 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<void> remove(Reminder reminder) async {
-    if (_notificationsAvailable) {
+    if (_notificationsAvailable && reminder.kind != NotificationKind.inbox) {
       await _notificationService.cancel(reminder.notificationId);
     }
     try {

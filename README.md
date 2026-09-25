@@ -4,7 +4,7 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 
 ## Funcionalidades
 
-- Criar lembretes com título, observação opcional e data e hora, ou deixá-los **sem horário**.
+- Criar lembretes com título e observação opcional, com data e hora ou **sem data**. Itens sem data podem ficar apenas na lista ou fixar um aviso ao salvar.
 - Editar, marcar como concluído, reabrir e excluir lembretes.
 - Consultar itens pendentes e concluídos, com destaque para o próximo lembrete e tarefas atrasadas.
 - Receber notificações locais no Android e no iOS, conforme o tipo escolhido.
@@ -14,9 +14,10 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 | --- | --- | --- |
 | **Temporária** | No horário escolhido; pode ser dispensada. | O alerta agendado é cancelado. |
 | **Permanente** | Assim que o lembrete é salvo; a data e a hora organizam a tarefa. | O lembrete continua salvo até ser excluído. O sistema pode dispensar o aviso do painel. |
-| **Sem horário** | Assim que o lembrete é salvo, como aviso permanente. | O lembrete continua salvo até ser excluído. O sistema pode dispensar o aviso do painel. |
+| **Sem data · Sem aviso** | Não envia notificação; guarda a tarefa na lista. | Continua na lista de concluídos. |
+| **Sem data · Fixar aviso agora** | Assim que o lembrete é salvo, como aviso permanente. | O lembrete continua salvo até ser excluído. O sistema pode dispensar o aviso do painel. |
 
-No Android, o símbolo escolhido aparece em um ícone grande colorido no painel; a cor também é enviada como destaque para o sistema. O restante da aparência depende da versão e das configurações do aparelho. Vermelho é o padrão para novos lembretes; os já salvos mantêm sua cor e seu símbolo. No iOS, o sistema controla o visual do banner, e a cor e o símbolo escolhidos aparecem na lista do aplicativo. Na Web, o formulário oferece um exemplo visual, mas não envia alertas. Registros antigos sem aparência salva mantêm os padrões anteriores: expandido, azul e sino.
+No Android, o símbolo escolhido aparece em um ícone grande colorido no painel; a cor também é enviada como destaque para o sistema. O restante da aparência depende da versão e das configurações do aparelho. Vermelho é o padrão para novos lembretes; os já salvos mantêm sua cor e seu símbolo. No iOS, o sistema controla o visual do banner, e a cor e o símbolo escolhidos aparecem na lista do aplicativo. Na Web, o formulário oferece um exemplo visual para opções com aviso, mas não envia alertas. Registros antigos sem aparência salva mantêm os padrões anteriores: expandido, azul e sino.
 
 No Android 14 ou posterior, o sistema permite dispensar uma notificação permanente com um gesto no painel. O aplicativo a restaura ao abrir ou retomar e agenda uma nova apresentação aproximadamente a cada 24 horas, inclusive depois de reiniciar o aparelho, enquanto o lembrete existir e as notificações estiverem permitidas. O horário pode variar por decisão do Android. No iOS, o sistema também pode permitir dispensá-la; ela volta quando o app abre ou retoma. Nenhum dos dois sistemas garante que um aviso comum permaneça continuamente no painel até a exclusão dentro do aplicativo.
 
@@ -38,7 +39,7 @@ No celular, permita notificações quando o sistema solicitar. Se a permissão f
 
 Se o serviço de notificações não iniciar ou não puder restaurar os avisos, os lembretes continuam acessíveis e podem ser editados. A tela inicial informa o problema e oferece **Tentar novamente**. Alterações feitas enquanto os avisos estão indisponíveis são reconciliadas com o painel quando o serviço volta.
 
-A lista mostra se o aviso foi configurado, se seu horário é aproximado ou se a permissão está desativada. O diagnóstico é atualizado ao abrir ou retomar o aplicativo. No Android, um agendamento aproximado pode chegar depois da hora escolhida; o estado mostrado descreve a programação feita pelo app, não garante a entrega pelo sistema.
+Para itens com aviso, a lista mostra se ele foi configurado, se seu horário é aproximado ou se a permissão está desativada. Itens da caixa de entrada aparecem como “Sem data · sem aviso” e não solicitam permissão de notificações. O diagnóstico é atualizado ao abrir ou retomar o aplicativo. No Android, um agendamento aproximado pode chegar depois da hora escolhida; o estado mostrado descreve a programação feita pelo app, não garante a entrega pelo sistema.
 
 ### Assinatura Android para publicação
 

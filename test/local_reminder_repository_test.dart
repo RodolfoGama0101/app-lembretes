@@ -74,6 +74,37 @@ void main() {
     expect(restored.single.toJson()['accent'], 'yellow');
   });
 
+  test('mantém aviso antigo e item novo sem notificação na mesma lista',
+      () async {
+    final pinned = Reminder(
+      id: 'legacy',
+      notificationId: 7,
+      title: 'Aviso antigo',
+      scheduledAt: null,
+      kind: NotificationKind.unscheduled,
+      createdAt: DateTime(2030, 4, 1),
+    );
+    final inbox = Reminder(
+      id: 'inbox',
+      notificationId: 8,
+      title: 'Ideia sem data',
+      scheduledAt: null,
+      kind: NotificationKind.inbox,
+      createdAt: DateTime(2030, 4, 2),
+    );
+    SharedPreferences.setMockInitialValues({
+      'fio.reminders.v1': jsonEncode([pinned.toJson(), inbox.toJson()]),
+    });
+
+    final reminders = await LocalReminderRepository().load();
+
+    expect(reminders, hasLength(2));
+    expect(reminders.first.kind, NotificationKind.unscheduled);
+    expect(reminders.first.isPersistent, isTrue);
+    expect(reminders.last.kind, NotificationKind.inbox);
+    expect(reminders.last.isPersistent, isFalse);
+  });
+
   test('restaura lembrete sem horário salvo no dispositivo', () async {
     final unscheduled = Reminder(
       id: 'continuous',

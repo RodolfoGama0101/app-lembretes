@@ -337,6 +337,86 @@ void main() {
     expect(find.text('Nenhum lembrete'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('sem data salva na lista sem aviso', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Ideia sem prazo');
+    await tester.tap(find.text('Sem data e hora'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Sem aviso'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Sem aviso'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsNothing);
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.kind, NotificationKind.inbox);
+    expect(repository.items.single.scheduledAt, isNull);
+    expect(notifications.scheduled, isEmpty);
+    expect(find.text('Sem data • sem aviso'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('item da caixa de entrada pode receber horário depois',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository()
+      ..items = [
+        Reminder(
+          id: 'inbox',
+          notificationId: 77,
+          title: 'Ideia sem prazo',
+          scheduledAt: null,
+          kind: NotificationKind.inbox,
+          createdAt: DateTime.now(),
+        ),
+      ];
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Ideia sem prazo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sem data e hora'), findsOneWidget);
+
+    await tester.tap(find.text('Sem data e hora'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.kind, NotificationKind.temporary);
+    expect(repository.items.single.scheduledAt, isNotNull);
+    expect(notifications.scheduled.single.id, 'inbox');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sem horário oculta data e salva aviso permanente',
       (tester) async {
     tester.view.physicalSize = const Size(320, 568);
@@ -356,7 +436,19 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Sem prazo');
-    await tester.tap(find.text('Sem horário'));
+    await tester.tap(find.text('Sem data e hora'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Fixar aviso agora'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Fixar aviso agora')),
+      alignment: 0.4,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fixar aviso agora'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsNothing);
@@ -367,7 +459,7 @@ void main() {
     expect(repository.items.single.kind, NotificationKind.unscheduled);
     expect(repository.items.single.scheduledAt, isNull);
     expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
-    expect(find.text('Sem horário'), findsOneWidget);
+    expect(find.text('Sem data'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
@@ -385,6 +477,7 @@ class _MemoryRepository implements ReminderRepository {
 }
 
 class _FakeNotificationService implements NotificationService {
+  final List<Reminder> scheduled = [];
   bool failInitialize = false;
   bool failSchedule = false;
   NotificationDeliveryStatus scheduleStatus =
@@ -411,6 +504,7 @@ class _FakeNotificationService implements NotificationService {
   @override
   Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
     if (failSchedule) throw StateError('Agendamento falhou');
+    scheduled.add(reminder);
     return scheduleStatus;
   }
 

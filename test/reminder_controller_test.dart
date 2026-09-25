@@ -320,7 +320,8 @@ void main() {
     expect(controller.notificationFailure, NotificationFailure.initialization);
 
     final updated = controller.active.single.copyWith(title: 'Título alterado');
-    expect(await controller.update(updated), NotificationDeliveryStatus.unavailable);
+    expect(await controller.update(updated),
+        NotificationDeliveryStatus.unavailable);
     expect(repository.items.single.title, 'Título alterado');
     expect(notifications.scheduled, isEmpty);
 
@@ -396,6 +397,98 @@ void main() {
     expect(restored.keepNotificationAfterCompletion, isTrue);
     expect(restored.isCompleted, isTrue);
   });
+  test('caixa de entrada salva sem solicitar permissão ou publicar aviso',
+      () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService()..permissionGranted = false;
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+
+    final status = await controller.add(
+      title: 'Ideia para depois',
+      notes: '',
+      scheduledAt: null,
+      kind: NotificationKind.inbox,
+    );
+
+    final reminder = controller.active.single;
+    expect(status, NotificationDeliveryStatus.inactive);
+    expect(reminder.scheduledAt, isNull);
+    expect(reminder.isPersistent, isFalse);
+    expect(reminder.keepNotificationAfterCompletion, isFalse);
+    expect(notifications.requestedKinds, isEmpty);
+    expect(notifications.scheduled, isEmpty);
+    expect(controller.statusFor(reminder), NotificationDeliveryStatus.inactive);
+
+    await controller.toggleCompleted(reminder);
+    expect(notifications.cancelled, isEmpty);
+    await controller.load();
+    expect(notifications.restored, isEmpty);
+    expect(repository.items.single.kind, NotificationKind.inbox);
+
+    await controller.remove(controller.completed.single);
+    expect(notifications.cancelled, isEmpty);
+    expect(repository.items, isEmpty);
+  });
+
+  test('converter entre caixa de entrada e aviso fixo cria e remove o alerta',
+      () async {
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: notifications,
+    );
+    await controller.add(
+      title: 'Comprar presente',
+      notes: '',
+      scheduledAt: null,
+      kind: NotificationKind.inbox,
+    );
+    final inbox = controller.active.single;
+
+    await controller.update(inbox.copyWith(kind: NotificationKind.unscheduled));
+    expect(notifications.scheduled.single.kind, NotificationKind.unscheduled);
+    expect(notifications.cancelled, isEmpty);
+    expect(controller.active.single.keepNotificationAfterCompletion, isTrue);
+
+    await controller.update(
+      controller.active.single.copyWith(kind: NotificationKind.inbox),
+    );
+    expect(notifications.cancelled, [inbox.notificationId]);
+    expect(controller.active.single.keepNotificationAfterCompletion, isFalse);
+    expect(controller.active.single.scheduledAt, isNull);
+  });
+
+  test(
+      'serialização da caixa de entrada não converte avisos sem horário antigos',
+      () {
+    final inbox = Reminder(
+      id: 'inbox',
+      notificationId: 50,
+      title: 'Anotar ideia',
+      scheduledAt: null,
+      kind: NotificationKind.inbox,
+      createdAt: DateTime(2030, 4, 1),
+    );
+    final legacy = Reminder(
+      id: 'legacy',
+      notificationId: 51,
+      title: 'Aviso antigo',
+      scheduledAt: null,
+      kind: NotificationKind.unscheduled,
+      createdAt: DateTime(2030, 4, 1),
+    );
+    final restoredInbox = Reminder.fromJson(inbox.toJson());
+    final restoredLegacy = Reminder.fromJson(legacy.toJson());
+
+    expect(restoredInbox.kind, NotificationKind.inbox);
+    expect(restoredInbox.keepNotificationAfterCompletion, isFalse);
+    expect(restoredLegacy.kind, NotificationKind.unscheduled);
+    expect(restoredLegacy.keepNotificationAfterCompletion, isTrue);
+  });
+
   test('sem horário publica aviso permanente e o mantém até excluir', () async {
     final repository = _MemoryRepository();
     final notifications = _FakeNotificationService();
@@ -491,6 +584,7 @@ class _MemoryRepository implements ReminderRepository {
 
 class _FakeNotificationService implements NotificationService {
   final List<Reminder> scheduled = [];
+  final List<NotificationKind> requestedKinds = [];
   final List<int> cancelled = [];
   final List<Reminder> restored = [];
   bool permissionGranted = true;
@@ -524,8 +618,10 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<bool> requestPermission(NotificationKind kind) async =>
-      permissionGranted;
+  Future<bool> requestPermission(NotificationKind kind) async {
+    requestedKinds.add(kind);
+    return permissionGranted;
+  }
 
   @override
   Future<void> restorePersistent(Reminder reminder) async {

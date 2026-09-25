@@ -34,6 +34,7 @@ class LocalNotificationService implements NotificationService {
 
   @override
   Future<bool> requestPermission(NotificationKind kind) async {
+    if (kind == NotificationKind.inbox) return true;
     if (Platform.isAndroid) {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -59,6 +60,9 @@ class LocalNotificationService implements NotificationService {
 
   @override
   Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
+    if (reminder.kind == NotificationKind.inbox) {
+      throw ArgumentError('Um item da caixa de entrada não gera aviso.');
+    }
     final persistent = reminder.isPersistent;
     final when = reminder.isUnscheduled
         ? 'Sem horário'
