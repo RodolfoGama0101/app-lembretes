@@ -56,6 +56,10 @@ flutter run -d chrome
 
 A versão Web permite criar e organizar lembretes, mas **não envia notificações**. Os dados ficam no armazenamento local desse navegador e são perdidos se os dados do site forem apagados. Para testar alertas, use Android ou iOS.
 
+## Identificador Android
+
+O pacote Android é `com.rodolfogama.lembretes` a partir da versão 1.0.1. Como ele difere de `br.com.fio.fio_lembretes`, o Android instala esta versão como outro aplicativo: lembretes salvos na instalação antiga não são transferidos automaticamente. O pacote Dart agora se chama `lembretes`. A chave antiga `fio.reminders.v1` permanece no armazenamento para preservar lembretes já salvos na Web.
+
 ## Dados locais
 
 Os lembretes são salvos com `SharedPreferences` no dispositivo ou navegador em uso. Não há conta nem sincronização entre dispositivos. Excluir um lembrete também cancela sua notificação. No Android, alertas temporários agendados são restaurados após a reinicialização do aparelho; os avisos permanentes são restaurados quando o aplicativo é aberto ou retomado.
@@ -89,5 +93,3 @@ Os arquivos-fonte da arte ficam em `assets/branding/`. Para gerar os ícones de 
 python -m pip install -r tool/requirements.txt
 python tool/generate_app_icons.py
 ```
-
-O identificador interno `fio_lembretes` foi mantido para preservar instalações e dados locais existentes.

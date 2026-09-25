@@ -1,4 +1,4 @@
-package br.com.fio.fio_lembretes
+package com.rodolfogama.lembretes
 
 import io.flutter.embedding.android.FlutterActivity
 

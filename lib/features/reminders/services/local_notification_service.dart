@@ -26,7 +26,7 @@ class LocalNotificationService implements NotificationService {
       throw StateError('Fuso horário local desconhecido: $localTimezone');
     }
 
-    const android = AndroidInitializationSettings('ic_stat_fio');
+    const android = AndroidInitializationSettings('ic_stat_lembretes');
     const ios = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: ios);
     await _plugin.initialize(settings);
@@ -71,13 +71,13 @@ class LocalNotificationService implements NotificationService {
                 ? 'Lembrete fixado no painel'
                 : 'Está na hora deste lembrete.';
     final androidDetails = AndroidNotificationDetails(
-      persistent ? 'fio_persistent' : 'fio_temporary',
+      persistent ? 'lembretes_persistent' : 'lembretes_temporary',
       persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
       channelDescription: persistent
           ? 'Lembretes que aparecem ao salvar e ficam até a exclusão'
           : 'Lembretes que podem ser dispensados normalmente',
       icon: switch (reminder.symbol) {
-        NotificationSymbol.bell => 'ic_stat_fio',
+        NotificationSymbol.bell => 'ic_stat_lembretes',
         NotificationSymbol.star => 'ic_stat_star',
         NotificationSymbol.check => 'ic_stat_check',
       },

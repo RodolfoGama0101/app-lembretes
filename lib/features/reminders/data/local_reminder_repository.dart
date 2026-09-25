@@ -7,6 +7,7 @@ import '../domain/reminder.dart';
 import 'reminder_repository.dart';
 
 class LocalReminderRepository implements ReminderRepository {
+  // Preserve the legacy key so saved reminders still load on Web.
   static const _storageKey = 'fio.reminders.v1';
 
   @override

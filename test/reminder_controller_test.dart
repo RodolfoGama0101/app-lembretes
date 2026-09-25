@@ -1,8 +1,8 @@
-import 'package:fio_lembretes/features/reminders/data/reminder_repository.dart';
-import 'package:fio_lembretes/features/reminders/domain/notification_appearance.dart';
-import 'package:fio_lembretes/features/reminders/domain/reminder.dart';
-import 'package:fio_lembretes/features/reminders/presentation/reminder_controller.dart';
-import 'package:fio_lembretes/features/reminders/services/notification_service.dart';
+import 'package:lembretes/features/reminders/data/reminder_repository.dart';
+import 'package:lembretes/features/reminders/domain/notification_appearance.dart';
+import 'package:lembretes/features/reminders/domain/reminder.dart';
+import 'package:lembretes/features/reminders/presentation/reminder_controller.dart';
+import 'package:lembretes/features/reminders/services/notification_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

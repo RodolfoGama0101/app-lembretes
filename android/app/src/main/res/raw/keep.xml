@@ -1,2 +1,2 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_stat_fio,@drawable/ic_stat_star,@drawable/ic_stat_check" />
+    tools:keep="@drawable/ic_stat_lembretes,@drawable/ic_stat_star,@drawable/ic_stat_check" />
