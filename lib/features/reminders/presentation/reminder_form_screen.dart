@@ -52,7 +52,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
         );
     _kind = reminder?.kind ?? NotificationKind.temporary;
     _visualStyle = reminder?.visualStyle ?? NotificationVisualStyle.expanded;
-    _accent = reminder?.accent ?? NotificationAccent.blue;
+    _accent = reminder?.accent ?? NotificationAccent.red;
     _symbol = reminder?.symbol ?? NotificationSymbol.bell;
     _titleController.addListener(_refreshPreview);
     _notesController.addListener(_refreshPreview);
@@ -132,7 +132,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                   subtitle: Text(
                     kIsWeb
                         ? 'Fica na lista sem data ou hora.'
-                        : 'Aviso permanente até excluir.',
+                        : 'Aparece ao salvar. No Android, reaparece após cerca de um dia se for dispensado.',
                   ),
                   secondary: Icon(
                     Icons.push_pin_rounded,
@@ -199,7 +199,8 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                   const SizedBox(height: 8),
                   _NotificationOption(
                     title: 'Permanente',
-                    description: 'Aparece ao salvar e fica até excluir.',
+                    description:
+                        'Aparece ao salvar. No Android, reaparece após cerca de um dia se for dispensado.',
                     icon: Icons.notifications_active_outlined,
                     selected: _kind == NotificationKind.persistent,
                     onTap: () => setState(() {
@@ -228,6 +229,7 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
                 visualStyle: _visualStyle,
                 accent: _accent,
                 symbol: _symbol,
+                kind: _kind,
                 title: _titleController.text,
                 notes: _notesController.text,
                 onStyleChanged: (value) => setState(() => _visualStyle = value),

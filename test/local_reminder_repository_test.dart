@@ -54,6 +54,26 @@ void main() {
     expect(reminders.single.symbol, NotificationSymbol.bell);
   });
 
+  test('preserva a cor amarela ao salvar e reabrir', () async {
+    SharedPreferences.setMockInitialValues({});
+    final reminder = Reminder(
+      id: 'yellow',
+      notificationId: 4,
+      title: 'Consulta',
+      scheduledAt: DateTime(2030, 5, 1, 10),
+      kind: NotificationKind.temporary,
+      accent: NotificationAccent.yellow,
+      createdAt: DateTime(2030, 4, 1),
+    );
+    final repository = LocalReminderRepository();
+
+    await repository.save([reminder]);
+    final restored = await repository.load();
+
+    expect(restored.single.accent, NotificationAccent.yellow);
+    expect(restored.single.toJson()['accent'], 'yellow');
+  });
+
   test('restaura lembrete sem horário salvo no dispositivo', () async {
     final unscheduled = Reminder(
       id: 'continuous',

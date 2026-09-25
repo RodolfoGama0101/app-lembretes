@@ -47,7 +47,18 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsOneWidget);
+    final date = find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}'));
+    await tester.scrollUntilVisible(
+      date,
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(date, findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Tipo de notificação'),
       180,
@@ -82,7 +93,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Personalizado');
 
-    for (final label in ['Compacto', 'Verde', 'Estrela']) {
+    for (final label in ['Compacto', 'Amarelo', 'Estrela']) {
       await tester.scrollUntilVisible(
         find.text(label),
         180,
@@ -102,7 +113,7 @@ void main() {
 
     expect(
         repository.items.single.visualStyle, NotificationVisualStyle.compact);
-    expect(repository.items.single.accent, NotificationAccent.green);
+    expect(repository.items.single.accent, NotificationAccent.yellow);
     expect(repository.items.single.symbol, NotificationSymbol.star);
     expect(tester.takeException(), isNull);
   });

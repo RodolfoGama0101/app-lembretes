@@ -8,17 +8,17 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 - Editar, marcar como concluído, reabrir e excluir lembretes.
 - Consultar itens pendentes e concluídos, com destaque para o próximo lembrete e tarefas atrasadas.
 - Receber notificações locais no Android e no iOS, conforme o tipo escolhido.
-- Escolher, por lembrete, o estilo compacto ou expandido, a cor de destaque e o ícone do alerta.
+- Escolher, por lembrete, o texto compacto ou expandível, a cor e o símbolo do alerta. No Android, a cor aparece no ícone grande da notificação e em detalhes definidos pelo sistema.
 
 | Tipo | Quando aparece no celular | Ao concluir |
 | --- | --- | --- |
 | **Temporária** | No horário escolhido; pode ser dispensada. | O alerta agendado é cancelado. |
-| **Permanente** | Assim que o lembrete é salvo; a data e a hora organizam a tarefa. | Continua visível até o lembrete ser excluído. |
-| **Sem horário** | Assim que o lembrete é salvo, como aviso permanente. | Continua visível até o lembrete ser excluído. |
+| **Permanente** | Assim que o lembrete é salvo; a data e a hora organizam a tarefa. | O lembrete continua salvo até ser excluído. O sistema pode dispensar o aviso do painel. |
+| **Sem horário** | Assim que o lembrete é salvo, como aviso permanente. | O lembrete continua salvo até ser excluído. O sistema pode dispensar o aviso do painel. |
 
-No Android, estilo, cor de destaque e ícone são aplicados à notificação; a aparência final também depende da versão e das configurações do sistema. No iOS, o sistema controla o visual do banner, e a cor e o ícone escolhidos aparecem na lista do aplicativo. Na Web, o formulário oferece uma prévia, mas não envia alertas. Lembretes já salvos mantêm o visual anterior: expandido, azul e sino.
+No Android, o símbolo escolhido aparece em um ícone grande colorido no painel; a cor também é enviada como destaque para o sistema. O restante da aparência depende da versão e das configurações do aparelho. Vermelho é o padrão para novos lembretes; os já salvos mantêm sua cor e seu símbolo. No iOS, o sistema controla o visual do banner, e a cor e o símbolo escolhidos aparecem na lista do aplicativo. Na Web, o formulário oferece um exemplo visual, mas não envia alertas. Registros antigos sem aparência salva mantêm os padrões anteriores: expandido, azul e sino.
 
-No Android 14 ou posterior, o sistema pode permitir dispensar uma notificação permanente pelo painel. O aplicativo a restaura ao abrir ou retomar. No iOS, o sistema também pode permitir dispensá-la.
+No Android 14 ou posterior, o sistema permite dispensar uma notificação permanente com um gesto no painel. O aplicativo a restaura ao abrir ou retomar e agenda uma nova apresentação aproximadamente a cada 24 horas, inclusive depois de reiniciar o aparelho, enquanto o lembrete existir e as notificações estiverem permitidas. O horário pode variar por decisão do Android. No iOS, o sistema também pode permitir dispensá-la; ela volta quando o app abre ou retoma. Nenhum dos dois sistemas garante que um aviso comum permaneça continuamente no painel até a exclusão dentro do aplicativo.
 
 ## Executar o projeto
 
@@ -62,7 +62,7 @@ O pacote Android é `com.rodolfogama.lembretes` a partir da versão 1.0.1. Como 
 
 ## Dados locais
 
-Os lembretes são salvos com `SharedPreferences` no dispositivo ou navegador em uso. Não há conta nem sincronização entre dispositivos. Excluir um lembrete também cancela sua notificação. No Android, alertas temporários agendados são restaurados após a reinicialização do aparelho; os avisos permanentes são restaurados quando o aplicativo é aberto ou retomado.
+Os lembretes são salvos com `SharedPreferences` no dispositivo ou navegador em uso. Não há conta nem sincronização entre dispositivos. Excluir um lembrete também cancela sua notificação. No Android, alertas temporários e a reapresentação diária dos avisos permanentes são restaurados após a reinicialização do aparelho; os avisos permanentes também são restaurados quando o aplicativo é aberto ou retomado.
 
 ## Desenvolvimento
 
@@ -92,4 +92,10 @@ Os arquivos-fonte da arte ficam em `assets/branding/`. Para gerar os ícones de 
 ```bash
 python -m pip install -r tool/requirements.txt
 python tool/generate_app_icons.py
+```
+
+Para gerar novamente os ícones grandes das notificações Android após mudar a paleta:
+
+```bash
+python tool/generate_notification_badges.py
 ```

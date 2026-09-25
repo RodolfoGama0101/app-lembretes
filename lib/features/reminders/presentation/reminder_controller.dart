@@ -84,7 +84,7 @@ class ReminderController extends ChangeNotifier {
     required DateTime? scheduledAt,
     required NotificationKind kind,
     NotificationVisualStyle visualStyle = NotificationVisualStyle.expanded,
-    NotificationAccent accent = NotificationAccent.blue,
+    NotificationAccent accent = NotificationAccent.red,
     NotificationSymbol symbol = NotificationSymbol.bell,
   }) async {
     if ((kind == NotificationKind.unscheduled) != (scheduledAt == null)) {

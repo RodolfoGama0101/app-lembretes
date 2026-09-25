@@ -26,6 +26,7 @@ void main() {
     expect(repository.items, hasLength(1));
     expect(notifications.scheduled, hasLength(1));
     expect(repository.items.single.keepNotificationAfterCompletion, isTrue);
+    expect(repository.items.single.accent, NotificationAccent.red);
   });
 
   test('salva aparência e republica ao editar apenas o visual', () async {

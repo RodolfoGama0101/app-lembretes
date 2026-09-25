@@ -8,6 +8,8 @@ extension NotificationAccentDisplay on NotificationAccent {
         NotificationAccent.green => 'Verde',
         NotificationAccent.orange => 'Laranja',
         NotificationAccent.purple => 'Roxo',
+        NotificationAccent.red => 'Vermelho',
+        NotificationAccent.yellow => 'Amarelo',
       };
 
   Color get color => Color(colorValue);

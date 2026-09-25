@@ -74,7 +74,7 @@ class LocalNotificationService implements NotificationService {
       persistent ? 'lembretes_persistent' : 'lembretes_temporary',
       persistent ? 'Lembretes permanentes' : 'Lembretes temporários',
       channelDescription: persistent
-          ? 'Lembretes que aparecem ao salvar e ficam até a exclusão'
+          ? 'Lembretes que aparecem ao salvar e reaparecem diariamente'
           : 'Lembretes que podem ser dispensados normalmente',
       icon: switch (reminder.symbol) {
         NotificationSymbol.bell => 'ic_stat_lembretes',
@@ -82,6 +82,9 @@ class LocalNotificationService implements NotificationService {
         NotificationSymbol.check => 'ic_stat_check',
       },
       color: Color(reminder.accent.colorValue),
+      largeIcon: DrawableResourceAndroidBitmap(
+        reminder.accent.badgeName(reminder.symbol),
+      ),
       subText: when,
       ticker: reminder.title,
       styleInformation: reminder.visualStyle == NotificationVisualStyle.expanded
@@ -120,6 +123,24 @@ class LocalNotificationService implements NotificationService {
         details,
         payload: reminder.id,
       );
+      if (Platform.isAndroid) {
+        try {
+          // Android 14+ lets users swipe ongoing notifications away.
+          // A daily repeat brings the reminder back without opening the app.
+          await _plugin.periodicallyShowWithDuration(
+            reminder.notificationId,
+            reminder.title,
+            body,
+            const Duration(days: 1),
+            details,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            payload: reminder.id,
+          );
+        } catch (_) {
+          await _plugin.cancel(reminder.notificationId);
+          rethrow;
+        }
+      }
       return;
     }
 
@@ -151,7 +172,13 @@ class LocalNotificationService implements NotificationService {
       if (active.any(
         (notification) => notification.id == reminder.notificationId,
       )) {
-        return;
+        if (!Platform.isAndroid) return;
+        final pending = await _plugin.pendingNotificationRequests();
+        if (pending.any(
+          (request) => request.id == reminder.notificationId,
+        )) {
+          return;
+        }
       }
     }
     await schedule(reminder);

@@ -27,7 +27,7 @@ SharedPreferences (JSON)
 
 `ReminderController` concentra ordenação, validação de estado, conclusão e coordena persistência/notificação. `Reminder` é o modelo serializável e `NotificationKind` diferencia alertas temporários de permanentes.
 
-A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são persistidos junto com os demais campos. Registros antigos recebem os padrões anteriores durante a leitura. A edição republica o alerta quando algum desses campos muda.
+A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são persistidos junto com os demais campos. Registros antigos recebem os padrões anteriores durante a leitura. Novos lembretes usam vermelho por padrão. A edição republica o alerta quando algum desses campos muda.
 
 ### Dados
 
@@ -35,7 +35,7 @@ A aparência do alerta pertence a cada `Reminder`: estilo, cor e símbolo são p
 
 ### Integração nativa
 
-`LocalNotificationService` encapsula o plugin de notificações, fuso horário, permissões e canais Android. A notificação permanente usa `ongoing: true` e aparece imediatamente; a temporária é agendada e permite dispensa normal.
+`LocalNotificationService` encapsula o plugin de notificações, fuso horário, permissões e canais Android. No Android, ele combina o símbolo e a cor em um ícone grande gerado para o painel e usa a cor também como destaque do sistema. A notificação permanente usa `ongoing: true` e aparece imediatamente. No Android, o mesmo identificador é reapresentado a cada 24 horas por um alarme aproximado restaurado após o reinício; a temporária é agendada e permite dispensa normal.
 
 ## Fluxo principal
 
@@ -55,7 +55,7 @@ Essa evolução não exige alterar os widgets; apenas a composição do reposit�
 
 ## Decisões e limites
 
-- Sem recorrência na primeira versão para manter o fluxo simples.
+- Sem recorrência de tarefas; no Android, apenas o aviso permanente é reapresentado diariamente.
 - Sem autenticação ou rede.
 - Alarmes exatos são solicitados para alertas temporários no Android; quando negados, usa-se agendamento aproximado.
-- O Android 14 ou posterior pode permitir que o usuário dispense notificações `ongoing` pelo painel. O app restaura as permanentes ao abrir ou retomar. No iOS, o sistema também permite dispensá-las.
+- O Android 14 ou posterior permite que o usuário dispense notificações `ongoing` com um gesto no painel. O app restaura as permanentes ao abrir ou retomar e as reapresenta diariamente no Android; o sistema pode atrasar a entrega. No iOS, o sistema também permite dispensá-las.
