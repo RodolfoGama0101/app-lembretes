@@ -10,7 +10,7 @@ enum NotificationDeliveryStatus {
 
 abstract interface class NotificationService {
   Future<void> initialize();
-  Future<bool> requestPermission(NotificationKind kind);
+  Future<bool> requestPermission(ReminderAlertMode mode);
   Future<NotificationDeliveryStatus> schedule(Reminder reminder);
   Future<void> restorePersistent(Reminder reminder);
   Future<Map<String, NotificationDeliveryStatus>> reconcile(

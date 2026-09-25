@@ -1,14 +1,34 @@
 import 'notification_appearance.dart';
 
+/// Values stored by versions before the task date and alert were independent.
 enum NotificationKind { temporary, persistent, unscheduled, inbox }
 
+enum ReminderAlertMode { none, atTime, pinned }
+
+ReminderAlertMode _modeFromLegacy(NotificationKind kind) => switch (kind) {
+      NotificationKind.temporary => ReminderAlertMode.atTime,
+      NotificationKind.persistent ||
+      NotificationKind.unscheduled =>
+        ReminderAlertMode.pinned,
+      NotificationKind.inbox => ReminderAlertMode.none,
+    };
+
+ReminderAlertMode _resolveMode(
+    ReminderAlertMode? mode, NotificationKind? kind) {
+  if ((mode == null) == (kind == null)) {
+    throw ArgumentError('Informe apenas um modo de aviso.');
+  }
+  return mode ?? _modeFromLegacy(kind!);
+}
+
 class Reminder {
-  const Reminder({
+  Reminder({
     required this.id,
     required this.notificationId,
     required this.title,
     required this.scheduledAt,
-    required this.kind,
+    ReminderAlertMode? alertMode,
+    NotificationKind? kind,
     this.notes = '',
     this.visualStyle = NotificationVisualStyle.expanded,
     this.accent = NotificationAccent.blue,
@@ -16,16 +36,14 @@ class Reminder {
     this.isCompleted = false,
     bool keepNotificationAfterCompletion = false,
     required this.createdAt,
-  })  : keepNotificationAfterCompletion =
-            kind == NotificationKind.unscheduled ||
-                (kind == NotificationKind.persistent &&
-                    keepNotificationAfterCompletion),
-        assert(
-          (kind == NotificationKind.unscheduled ||
-                  kind == NotificationKind.inbox) ==
-              (scheduledAt == null),
-          'Only reminders without a time can omit scheduledAt.',
-        );
+  })  : alertMode = _resolveMode(alertMode, kind),
+        keepNotificationAfterCompletion =
+            _resolveMode(alertMode, kind) == ReminderAlertMode.pinned &&
+                (scheduledAt == null || keepNotificationAfterCompletion) {
+    if (this.alertMode == ReminderAlertMode.atTime && scheduledAt == null) {
+      throw ArgumentError('Aviso no horário exige data e hora.');
+    }
+  }
 
   final String id;
   final int notificationId;
@@ -34,17 +52,27 @@ class Reminder {
   final NotificationVisualStyle visualStyle;
   final NotificationAccent accent;
   final NotificationSymbol symbol;
+
+  /// Date and time for doing the task, independent of when a pinned alert appears.
   final DateTime? scheduledAt;
-  final NotificationKind kind;
+  final ReminderAlertMode alertMode;
   final bool isCompleted;
   final bool keepNotificationAfterCompletion;
   final DateTime createdAt;
 
-  bool get isUnscheduled => kind == NotificationKind.unscheduled;
+  /// Compatibility view for old records and callers still being migrated.
+  NotificationKind get kind => switch (alertMode) {
+        ReminderAlertMode.atTime => NotificationKind.temporary,
+        ReminderAlertMode.pinned => scheduledAt == null
+            ? NotificationKind.unscheduled
+            : NotificationKind.persistent,
+        ReminderAlertMode.none => NotificationKind.inbox,
+      };
+
+  bool get isUnscheduled =>
+      alertMode == ReminderAlertMode.pinned && scheduledAt == null;
   bool get hasNoDate => scheduledAt == null;
-  bool get isPersistent =>
-      kind == NotificationKind.persistent ||
-      kind == NotificationKind.unscheduled;
+  bool get isPersistent => alertMode == ReminderAlertMode.pinned;
   bool get isPast => scheduledAt?.isBefore(DateTime.now()) ?? false;
 
   Reminder copyWith({
@@ -54,11 +82,19 @@ class Reminder {
     NotificationAccent? accent,
     NotificationSymbol? symbol,
     DateTime? scheduledAt,
+    bool clearScheduledAt = false,
+    ReminderAlertMode? alertMode,
     NotificationKind? kind,
     bool? isCompleted,
     bool? keepNotificationAfterCompletion,
   }) {
-    final nextKind = kind ?? this.kind;
+    final nextMode =
+        alertMode ?? (kind == null ? this.alertMode : _modeFromLegacy(kind));
+    final nextDate = clearScheduledAt ||
+            kind == NotificationKind.unscheduled ||
+            kind == NotificationKind.inbox
+        ? null
+        : scheduledAt ?? this.scheduledAt;
     return Reminder(
       id: id,
       notificationId: notificationId,
@@ -67,11 +103,8 @@ class Reminder {
       visualStyle: visualStyle ?? this.visualStyle,
       accent: accent ?? this.accent,
       symbol: symbol ?? this.symbol,
-      scheduledAt: nextKind == NotificationKind.unscheduled ||
-              nextKind == NotificationKind.inbox
-          ? null
-          : scheduledAt ?? this.scheduledAt,
-      kind: nextKind,
+      scheduledAt: nextDate,
+      alertMode: nextMode,
       isCompleted: isCompleted ?? this.isCompleted,
       keepNotificationAfterCompletion: keepNotificationAfterCompletion ??
           this.keepNotificationAfterCompletion,
@@ -88,7 +121,7 @@ class Reminder {
         'accent': accent.name,
         'symbol': symbol.name,
         'scheduledAt': scheduledAt?.toIso8601String(),
-        'kind': kind.name,
+        'alertMode': alertMode.name,
         'isCompleted': isCompleted,
         'keepNotificationAfterCompletion': keepNotificationAfterCompletion,
         'createdAt': createdAt.toIso8601String(),
@@ -96,11 +129,23 @@ class Reminder {
 
   factory Reminder.fromJson(Map<String, Object?> json) {
     final rawScheduledAt = json['scheduledAt'] as String?;
-    final kind = NotificationKind.values.byName(json['kind']! as String);
-    if ((kind == NotificationKind.unscheduled ||
-            kind == NotificationKind.inbox) !=
-        (rawScheduledAt == null)) {
-      throw const FormatException('Tipo e horário incompatíveis.');
+    final rawMode = json['alertMode'] as String?;
+    final mode = rawMode == null
+        ? _modeFromLegacy(
+            NotificationKind.values.byName(json['kind']! as String),
+          )
+        : ReminderAlertMode.values.byName(rawMode);
+    if (rawMode == null) {
+      final legacyKind =
+          NotificationKind.values.byName(json['kind']! as String);
+      if ((legacyKind == NotificationKind.unscheduled ||
+              legacyKind == NotificationKind.inbox) !=
+          (rawScheduledAt == null)) {
+        throw const FormatException('Tipo e horário incompatíveis.');
+      }
+    }
+    if (mode == ReminderAlertMode.atTime && rawScheduledAt == null) {
+      throw const FormatException('Aviso no horário sem data.');
     }
     return Reminder(
       id: json['id']! as String,
@@ -119,7 +164,7 @@ class Reminder {
       ),
       scheduledAt:
           rawScheduledAt == null ? null : DateTime.parse(rawScheduledAt),
-      kind: kind,
+      alertMode: mode,
       isCompleted: (json['isCompleted'] as bool?) ?? false,
       keepNotificationAfterCompletion:
           (json['keepNotificationAfterCompletion'] as bool?) ?? false,

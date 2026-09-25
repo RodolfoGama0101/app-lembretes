@@ -7,7 +7,7 @@ class LocalNotificationService implements NotificationService {
   Future<void> initialize() async {}
 
   @override
-  Future<bool> requestPermission(NotificationKind kind) async => false;
+  Future<bool> requestPermission(ReminderAlertMode mode) async => false;
 
   @override
   Future<NotificationDeliveryStatus> schedule(Reminder reminder) async =>

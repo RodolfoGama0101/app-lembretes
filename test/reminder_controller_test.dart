@@ -29,6 +29,39 @@ void main() {
     expect(repository.items.single.accent, NotificationAccent.red);
   });
 
+  test('data sem aviso não solicita permissão e permite ativar aviso depois',
+      () async {
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    final date = DateTime.now().add(const Duration(days: 1));
+    final status = await controller.add(
+      title: 'Consulta',
+      notes: '',
+      scheduledAt: date,
+      alertMode: ReminderAlertMode.none,
+    );
+    expect(status, NotificationDeliveryStatus.inactive);
+    expect(repository.items.single.scheduledAt, date);
+    expect(notifications.requestedKinds, isEmpty);
+    expect(notifications.scheduled, isEmpty);
+
+    await controller.update(
+      controller.active.single.copyWith(alertMode: ReminderAlertMode.atTime),
+    );
+    expect(notifications.requestedKinds, [ReminderAlertMode.atTime]);
+    expect(notifications.scheduled.single.scheduledAt, date);
+
+    await controller.update(
+      controller.active.single.copyWith(alertMode: ReminderAlertMode.none),
+    );
+    expect(notifications.cancelled, hasLength(1));
+    expect(controller.active.single.scheduledAt, date);
+  });
+
   test('salva aparência e republica ao editar apenas o visual', () async {
     final notifications = _FakeNotificationService();
     final controller = ReminderController(
@@ -584,7 +617,7 @@ class _MemoryRepository implements ReminderRepository {
 
 class _FakeNotificationService implements NotificationService {
   final List<Reminder> scheduled = [];
-  final List<NotificationKind> requestedKinds = [];
+  final List<ReminderAlertMode> requestedKinds = [];
   final List<int> cancelled = [];
   final List<Reminder> restored = [];
   bool permissionGranted = true;
@@ -618,8 +651,8 @@ class _FakeNotificationService implements NotificationService {
   }
 
   @override
-  Future<bool> requestPermission(NotificationKind kind) async {
-    requestedKinds.add(kind);
+  Future<bool> requestPermission(ReminderAlertMode mode) async {
+    requestedKinds.add(mode);
     return permissionGranted;
   }
 

@@ -34,7 +34,7 @@ class ReminderController extends ChangeNotifier {
   bool get notificationsAvailable => _notificationsAvailable;
   NotificationFailure? get notificationFailure => _notificationFailure;
   NotificationDeliveryStatus? statusFor(Reminder reminder) {
-    if (reminder.kind == NotificationKind.inbox ||
+    if (reminder.alertMode == ReminderAlertMode.none ||
         (reminder.isCompleted && !reminder.keepNotificationAfterCompletion)) {
       return NotificationDeliveryStatus.inactive;
     }
@@ -164,14 +164,30 @@ class ReminderController extends ChangeNotifier {
     required String title,
     required String notes,
     required DateTime? scheduledAt,
-    required NotificationKind kind,
+    NotificationKind? kind,
+    ReminderAlertMode? alertMode,
     NotificationVisualStyle visualStyle = NotificationVisualStyle.expanded,
     NotificationAccent accent = NotificationAccent.red,
     NotificationSymbol symbol = NotificationSymbol.bell,
   }) async {
-    if ((kind == NotificationKind.unscheduled ||
-            kind == NotificationKind.inbox) !=
-        (scheduledAt == null)) {
+    if ((kind == null) == (alertMode == null)) {
+      throw ArgumentError('Informe apenas um modo de aviso.');
+    }
+    final mode = alertMode ??
+        switch (kind!) {
+          NotificationKind.temporary => ReminderAlertMode.atTime,
+          NotificationKind.persistent ||
+          NotificationKind.unscheduled =>
+            ReminderAlertMode.pinned,
+          NotificationKind.inbox => ReminderAlertMode.none,
+        };
+    if ((mode == ReminderAlertMode.atTime && scheduledAt == null) ||
+        ((kind == NotificationKind.unscheduled ||
+                kind == NotificationKind.inbox) &&
+            scheduledAt != null) ||
+        ((kind == NotificationKind.temporary ||
+                kind == NotificationKind.persistent) &&
+            scheduledAt == null)) {
       throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
     }
     final now = DateTime.now();
@@ -189,19 +205,18 @@ class ReminderController extends ChangeNotifier {
       title: title.trim(),
       notes: notes.trim(),
       scheduledAt: scheduledAt,
-      kind: kind,
+      alertMode: mode,
       visualStyle: visualStyle,
       accent: accent,
       symbol: symbol,
-      keepNotificationAfterCompletion: kind == NotificationKind.persistent ||
-          kind == NotificationKind.unscheduled,
+      keepNotificationAfterCompletion: mode == ReminderAlertMode.pinned,
       createdAt: now,
     );
 
-    final needsNotification = kind != NotificationKind.inbox;
+    final needsNotification = mode != ReminderAlertMode.none;
     final permitted = needsNotification &&
         _notificationsAvailable &&
-        await _notificationService.requestPermission(kind);
+        await _notificationService.requestPermission(mode);
     final status = !needsNotification
         ? NotificationDeliveryStatus.inactive
         : !_notificationsAvailable
@@ -228,10 +243,9 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<NotificationDeliveryStatus> update(Reminder updated) async {
-    if ((updated.kind == NotificationKind.unscheduled ||
-            updated.kind == NotificationKind.inbox) !=
-        (updated.scheduledAt == null)) {
-      throw ArgumentError('O tipo e o horário do lembrete não correspondem.');
+    if (updated.alertMode == ReminderAlertMode.atTime &&
+        updated.scheduledAt == null) {
+      throw ArgumentError('Aviso no horário exige data e hora.');
     }
     final index = _reminders.indexWhere((item) => item.id == updated.id);
     if (index < 0) return NotificationDeliveryStatus.inactive;
@@ -252,7 +266,7 @@ class ReminderController extends ChangeNotifier {
     final notificationUnchanged = replaceVisiblePersistent &&
         previousStatus != NotificationDeliveryStatus.permissionDenied &&
         previousStatus != NotificationDeliveryStatus.unavailable &&
-        previous.kind == updated.kind &&
+        previous.alertMode == updated.alertMode &&
         previous.scheduledAt == updated.scheduledAt &&
         previous.title == updated.title &&
         previous.notes == updated.notes &&
@@ -260,15 +274,15 @@ class ReminderController extends ChangeNotifier {
         previous.accent == updated.accent &&
         previous.symbol == updated.symbol;
     final shouldSchedule = _shouldShowPersistent(updated) ||
-        (updated.kind == NotificationKind.temporary &&
+        (updated.alertMode == ReminderAlertMode.atTime &&
             !updated.isCompleted &&
             (updated.scheduledAt?.isAfter(DateTime.now()) ?? false));
     final permitted = notificationUnchanged ||
         !shouldSchedule ||
-        await _notificationService.requestPermission(updated.kind);
+        await _notificationService.requestPermission(updated.alertMode);
     if (!notificationUnchanged &&
         !replaceVisiblePersistent &&
-        previous.kind != NotificationKind.inbox) {
+        previous.alertMode != ReminderAlertMode.none) {
       await _notificationService.cancel(previous.notificationId);
     }
     var status = NotificationDeliveryStatus.inactive;
@@ -291,7 +305,7 @@ class ReminderController extends ChangeNotifier {
             await _notificationService.cancel(updated.notificationId);
           }
           if (_shouldShowPersistent(previous) ||
-              (previous.kind == NotificationKind.temporary &&
+              (previous.alertMode == ReminderAlertMode.atTime &&
                   !previous.isCompleted &&
                   (previous.scheduledAt?.isAfter(DateTime.now()) ?? false))) {
             await _notificationService.schedule(previous);
@@ -318,7 +332,8 @@ class ReminderController extends ChangeNotifier {
   }
 
   Future<void> remove(Reminder reminder) async {
-    if (_notificationsAvailable && reminder.kind != NotificationKind.inbox) {
+    if (_notificationsAvailable &&
+        reminder.alertMode != ReminderAlertMode.none) {
       await _notificationService.cancel(reminder.notificationId);
     }
     try {
@@ -328,7 +343,7 @@ class ReminderController extends ChangeNotifier {
     } catch (_) {
       if (_notificationsAvailable &&
           (_shouldShowPersistent(reminder) ||
-              (reminder.kind == NotificationKind.temporary &&
+              (reminder.alertMode == ReminderAlertMode.atTime &&
                   !reminder.isCompleted &&
                   (reminder.scheduledAt?.isAfter(DateTime.now()) ?? false)))) {
         try {

@@ -90,6 +90,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-06 — Separar tarefa, data e alerta
 
+**Estado:** implementada em 25/09/2026; validação nativa registrada na matriz BL-04.
+
 **Problema:** o tipo técnico de notificação determina a experiência; data futura de item permanente não determina quando ele aparece.
 
 **Critérios de aceite:**

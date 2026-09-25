@@ -272,7 +272,7 @@ class _Header extends StatelessWidget {
                                   ? 'Próximo lembrete'
                                   : undated != null
                                       ? undated.isUnscheduled
-                                          ? 'Sem horário • permanente'
+                                          ? 'Sem data • fixado'
                                           : 'Sem data • sem aviso'
                                       : 'Tudo em dia',
                           style: theme.textTheme.bodyMedium,

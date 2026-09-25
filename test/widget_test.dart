@@ -25,7 +25,7 @@ void main() {
     await tester.tap(find.text('Novo lembrete'));
     await tester.pumpAndSettle();
     expect(find.text('O que lembrar?'), findsOneWidget);
-    expect(find.text('Tipo de notificação'), findsOneWidget);
+    expect(find.text('Quando avisar?'), findsOneWidget);
   });
 
   testWidgets('mostra dados e permite tentar alertas novamente',
@@ -173,7 +173,7 @@ void main() {
     );
     expect(date, findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Tipo de notificação'),
+      find.text('Quando avisar?'),
       180,
       scrollable: find
           .descendant(
@@ -440,6 +440,13 @@ void main() {
 
     await tester.tap(find.text('Sem data e hora'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Avisar no horário'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Avisar no horário'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar lembrete'));
     await tester.pumpAndSettle();
 
@@ -447,6 +454,42 @@ void main() {
     expect(repository.items.single.scheduledAt, isNotNull);
     expect(notifications.scheduled.single.id, 'inbox');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tarefa com data pode ficar sem aviso', (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final repository = _MemoryRepository();
+    final notifications = _FakeNotificationService();
+    final controller = ReminderController(
+      repository: repository,
+      notificationService: notifications,
+    );
+    await controller.load();
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Consulta');
+    await tester.scrollUntilVisible(
+      find.text('Sem aviso'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Sem aviso'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('Tarefa em'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('Tarefa em'), findsOneWidget);
+    await tester.tap(find.text('Salvar lembrete'));
+    await tester.pumpAndSettle();
+
+    expect(repository.items.single.scheduledAt, isNotNull);
+    expect(repository.items.single.alertMode, ReminderAlertMode.none);
+    expect(notifications.scheduled, isEmpty);
+    expect(notifications.requestedKinds, isEmpty);
+    expect(find.text('Sem aviso'), findsOneWidget);
   });
 
   testWidgets('sem horário oculta data e salva aviso permanente',
@@ -471,20 +514,20 @@ void main() {
     await tester.tap(find.text('Sem data e hora'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Fixar aviso agora'),
+      find.text('Fixar agora'),
       250,
       scrollable: find.byType(Scrollable).first,
     );
     await Scrollable.ensureVisible(
-      tester.element(find.text('Fixar aviso agora')),
+      tester.element(find.text('Fixar agora')),
       alignment: 0.4,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Fixar aviso agora'));
+    await tester.tap(find.text('Fixar agora'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining(RegExp(r'\d{2}/\d{2}/\d{4}')), findsNothing);
-    expect(find.text('Tipo de notificação'), findsNothing);
+    expect(find.text('Quando avisar?'), findsNothing);
     await tester.tap(find.text('Salvar lembrete'));
     await tester.pumpAndSettle();
 
@@ -510,6 +553,7 @@ class _MemoryRepository implements ReminderRepository {
 
 class _FakeNotificationService implements NotificationService {
   final List<Reminder> scheduled = [];
+  final List<ReminderAlertMode> requestedKinds = [];
   bool failInitialize = false;
   bool failSchedule = false;
   NotificationDeliveryStatus scheduleStatus =
@@ -531,7 +575,10 @@ class _FakeNotificationService implements NotificationService {
       };
 
   @override
-  Future<bool> requestPermission(NotificationKind kind) async => true;
+  Future<bool> requestPermission(ReminderAlertMode mode) async {
+    requestedKinds.add(mode);
+    return true;
+  }
 
   @override
   Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {

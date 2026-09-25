@@ -54,6 +54,58 @@ void main() {
     expect(reminders.single.symbol, NotificationSymbol.bell);
   });
 
+  test('migra os quatro tipos antigos e conserva tarefas datadas sem aviso',
+      () async {
+    final date = DateTime(2030, 5, 1, 10);
+    Map<String, Object?> oldRecord(String id, String kind, DateTime? when) {
+      final json = Reminder(
+        id: id,
+        notificationId: id.hashCode,
+        title: id,
+        scheduledAt: when,
+        alertMode:
+            when == null ? ReminderAlertMode.none : ReminderAlertMode.atTime,
+        createdAt: DateTime(2030, 4, 1),
+      ).toJson();
+      json.remove('alertMode');
+      json['kind'] = kind;
+      return json;
+    }
+
+    SharedPreferences.setMockInitialValues({
+      'fio.reminders.v1': jsonEncode([
+        oldRecord('temp', 'temporary', date),
+        oldRecord('pinned', 'persistent', date),
+        oldRecord('undated-pinned', 'unscheduled', null),
+        oldRecord('inbox', 'inbox', null),
+      ]),
+    });
+    final repository = LocalReminderRepository();
+    final loaded = await repository.load();
+    expect(loaded.map((item) => item.alertMode), [
+      ReminderAlertMode.atTime,
+      ReminderAlertMode.pinned,
+      ReminderAlertMode.pinned,
+      ReminderAlertMode.none,
+    ]);
+    expect(loaded.map((item) => item.scheduledAt), [date, date, null, null]);
+    await repository.save([
+      ...loaded,
+      Reminder(
+        id: 'dated-no-alert',
+        notificationId: 44,
+        title: 'Sem alerta',
+        scheduledAt: date,
+        alertMode: ReminderAlertMode.none,
+        createdAt: DateTime(2030, 4, 1),
+      ),
+    ]);
+    final restored = await repository.load();
+    expect(restored, hasLength(5));
+    expect(restored.last.scheduledAt, date);
+    expect(restored.last.alertMode, ReminderAlertMode.none);
+  });
+
   test('preserva a cor amarela ao salvar e reabrir', () async {
     SharedPreferences.setMockInitialValues({});
     final reminder = Reminder(

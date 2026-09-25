@@ -11,7 +11,8 @@ class NotificationAppearanceSelector extends StatelessWidget {
     required this.visualStyle,
     required this.accent,
     required this.symbol,
-    required this.kind,
+    required this.alertMode,
+    required this.hasDate,
     required this.title,
     required this.notes,
     required this.onStyleChanged,
@@ -22,7 +23,8 @@ class NotificationAppearanceSelector extends StatelessWidget {
   final NotificationVisualStyle visualStyle;
   final NotificationAccent accent;
   final NotificationSymbol symbol;
-  final NotificationKind kind;
+  final ReminderAlertMode alertMode;
+  final bool hasDate;
   final String title;
   final String notes;
   final ValueChanged<NotificationVisualStyle> onStyleChanged;
@@ -45,9 +47,9 @@ class NotificationAppearanceSelector extends StatelessWidget {
     final darkSymbol = accent == NotificationAccent.yellow;
     final body = notes.trim().isNotEmpty
         ? notes.trim()
-        : kind == NotificationKind.unscheduled
+        : !hasDate
             ? 'Lembrete sem horário, fixado no painel'
-            : kind == NotificationKind.persistent
+            : alertMode == ReminderAlertMode.pinned
                 ? 'Lembrete fixado no painel'
                 : 'Está na hora deste lembrete.';
     final explanation = kIsWeb

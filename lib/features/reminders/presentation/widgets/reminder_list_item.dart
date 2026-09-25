@@ -93,7 +93,7 @@ class ReminderListItem extends StatelessWidget {
                     ),
                     child: reminder.hasNoDate
                         ? Icon(
-                            reminder.kind == NotificationKind.inbox
+                            reminder.alertMode == ReminderAlertMode.none
                                 ? Icons.inbox_outlined
                                 : reminder.symbol.icon,
                             color: accent,
@@ -133,7 +133,7 @@ class ReminderListItem extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              reminder.kind == NotificationKind.inbox
+                              reminder.alertMode == ReminderAlertMode.none
                                   ? Icons.notifications_off_outlined
                                   : reminder.symbol.icon,
                               size: 14,
@@ -142,15 +142,17 @@ class ReminderListItem extends StatelessWidget {
                             const SizedBox(width: 5),
                             Flexible(
                               child: Text(
-                                reminder.kind == NotificationKind.inbox
-                                    ? 'Sem data • sem aviso'
+                                reminder.alertMode == ReminderAlertMode.none
+                                    ? (reminder.hasNoDate
+                                        ? 'Sem data • sem aviso'
+                                        : 'Sem aviso')
                                     : reminder.isUnscheduled
-                                        ? 'Sem horário • permanente'
+                                        ? 'Sem data • fixado'
                                         : kIsWeb
                                             ? 'Sem notificação'
                                             : persistent
-                                                ? 'Permanente'
-                                                : 'Temporária',
+                                                ? 'Fixado agora'
+                                                : 'Aviso no horário',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodyMedium

@@ -33,14 +33,14 @@ class LocalNotificationService implements NotificationService {
   }
 
   @override
-  Future<bool> requestPermission(NotificationKind kind) async {
-    if (kind == NotificationKind.inbox) return true;
+  Future<bool> requestPermission(ReminderAlertMode mode) async {
+    if (mode == ReminderAlertMode.none) return true;
     if (Platform.isAndroid) {
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       final notificationsAllowed =
           await android?.requestNotificationsPermission() ?? true;
-      if (notificationsAllowed && kind == NotificationKind.temporary) {
+      if (notificationsAllowed && mode == ReminderAlertMode.atTime) {
         await android?.requestExactAlarmsPermission();
       }
       return notificationsAllowed;
@@ -60,7 +60,7 @@ class LocalNotificationService implements NotificationService {
 
   @override
   Future<NotificationDeliveryStatus> schedule(Reminder reminder) async {
-    if (reminder.kind == NotificationKind.inbox) {
+    if (reminder.alertMode == ReminderAlertMode.none) {
       throw ArgumentError('Um item da caixa de entrada não gera aviso.');
     }
     final persistent = reminder.isPersistent;
@@ -206,7 +206,7 @@ class LocalNotificationService implements NotificationService {
         if ((reminder.isPersistent &&
                 (!reminder.isCompleted ||
                     reminder.keepNotificationAfterCompletion)) ||
-            (reminder.kind == NotificationKind.temporary &&
+            (reminder.alertMode == ReminderAlertMode.atTime &&
                 !reminder.isCompleted))
           reminder.notificationId,
     };
@@ -229,7 +229,7 @@ class LocalNotificationService implements NotificationService {
         if (stale) await _plugin.cancel(reminder.notificationId);
         await restorePersistent(reminder);
         statuses[reminder.id] = NotificationDeliveryStatus.scheduled;
-      } else if (reminder.kind == NotificationKind.temporary &&
+      } else if (reminder.alertMode == ReminderAlertMode.atTime &&
           !reminder.isCompleted) {
         if (!notificationsAllowed) {
           statuses[reminder.id] = NotificationDeliveryStatus.permissionDenied;
