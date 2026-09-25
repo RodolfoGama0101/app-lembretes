@@ -109,6 +109,38 @@ void main() {
         findsOneWidget);
   });
 
+  testWidgets('seletor aceita horas acima de 12 na entrada por texto',
+      (tester) async {
+    await initializeDateFormatting('pt_BR');
+    final controller = ReminderController(
+      repository: _MemoryRepository(),
+      notificationService: _FakeNotificationService(),
+    );
+    await controller.load();
+
+    await tester.pumpWidget(LembretesApp(controller: controller));
+    await tester.tap(find.text('Novo lembrete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hora'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mudar para o modo de entrada de texto'));
+    await tester.pumpAndSettle();
+
+    final fields = find.descendant(
+      of: find.byType(TimePickerDialog),
+      matching: find.byType(TextField),
+    );
+    expect(fields, findsNWidgets(2));
+    await tester.enterText(fields.first, '18');
+    await tester.enterText(fields.last, '45');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('18:45'), findsOneWidget);
+    expect(find.text('Insira um horário válido'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('formulário compacto mantém a data legível e a opção selecionada',
       (
     tester,

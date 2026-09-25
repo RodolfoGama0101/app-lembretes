@@ -306,6 +306,10 @@ class _ReminderFormScreenState extends State<ReminderFormScreen> {
     final value = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_scheduledAt),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
     );
     if (value == null) return;
     setState(() {

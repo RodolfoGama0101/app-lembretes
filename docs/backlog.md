@@ -64,6 +64,8 @@ Estimativas são relativas, não prazos. Mudanças na serialização devem migra
 
 ### BL-04 — Matriz de entrega nativa
 
+**Estado:** parcialmente validada em 25/09/2026 no emulador Android 17. A [matriz e os passos de reprodução](native-validation.md) registram resultados; entrega aproximada real, Android 13/14 e iOS seguem sem validação.
+
 **Problema:** testes Dart não comprovam a entrega pelo sistema operacional.
 
 **Critérios de aceite:**

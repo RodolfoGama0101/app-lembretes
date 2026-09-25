@@ -4,7 +4,7 @@ Aplicativo Flutter para organizar lembretes no próprio aparelho. Funciona sem c
 
 ## Funcionalidades
 
-- Criar lembretes com título e observação opcional, com data e hora ou **sem data**. Itens sem data podem ficar apenas na lista ou fixar um aviso ao salvar.
+- Criar lembretes com título e observação opcional, com data e hora ou **sem data**. Itens sem data podem ficar apenas na lista ou fixar um aviso ao salvar. O seletor de hora usa formato de 24 horas (por exemplo, 18:45).
 - Editar, marcar como concluído, reabrir e excluir lembretes.
 - Consultar itens pendentes e concluídos, com destaque para o próximo lembrete e tarefas atrasadas.
 - Receber notificações locais no Android e no iOS, conforme o tipo escolhido.
@@ -107,4 +107,4 @@ python tool/generate_notification_badges.py
 
 ## Planejamento de produto
 
-A [análise de produto e experiência](docs/product-analysis.md) reúne achados do código, pesquisa de necessidades e propostas de design. O [backlog](docs/backlog.md) organiza as melhorias por prioridade, dependência e critérios de aceite.
+A [análise de produto e experiência](docs/product-analysis.md) reúne achados do código, pesquisa de necessidades e propostas de design. O [backlog](docs/backlog.md) organiza as melhorias por prioridade, dependência e critérios de aceite. A [matriz de validação nativa](docs/native-validation.md) registra os cenários testados no emulador e os ainda pendentes.
